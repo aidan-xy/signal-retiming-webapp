@@ -3,9 +3,11 @@
  * ../../signal_api). Used as a fallback so the UI is fully explorable even
  * without a running backend -- see index.js for the switch-over logic.
  *
- * Coordinates trace the real path of Linden Blvd through Brooklyn (Flatbush
- * Ave westward end, running east through Brownsville) but are approximate
- * placements for demo purposes, not surveyed intersection points.
+ * No lat/lon here -- like the real API, this leaves placement to
+ * utils/placeIntersections, which resolves real coordinates by name
+ * (utils/corridorCoordinates.js) for the five sample intersections that are
+ * genuinely on Linden Blvd, and falls back to interpolation for "Rockaway
+ * Pkwy", which isn't part of the real 30-intersection corridor.
  */
 
 const CORRIDOR = { id: 1, name: 'Linden Blvd', borough: 'Brooklyn' }
@@ -18,8 +20,6 @@ const SPECS = [
     tab_name: 'Flatbush_Ave',
     name: 'Flatbush Ave',
     order: 1,
-    lat: 40.6525,
-    lon: -73.9544,
     major_ft: 82,
     minor_ft: 38,
     channels: ['veh-major', 'veh-minor', 'ped-major', 'ped-minor'],
@@ -47,8 +47,6 @@ const SPECS = [
     tab_name: 'Bedford_Ave',
     name: 'Bedford Ave & Caton Ave',
     order: 2,
-    lat: 40.6531,
-    lon: -73.9498,
     major_ft: 78,
     minor_ft: 36,
     channels: ['veh-major', 'veh-minor', 'ped-major', 'ped-minor'],
@@ -77,8 +75,6 @@ const SPECS = [
     tab_name: 'Nostrand_Ave',
     name: 'Nostrand Ave',
     order: 3,
-    lat: 40.6536,
-    lon: -73.9459,
     major_ft: 84,
     minor_ft: 40,
     channels: ['veh-major', 'veh-minor', 'ped-major', 'ped-minor'],
@@ -104,8 +100,6 @@ const SPECS = [
     tab_name: 'New_York_Ave',
     name: 'New York Ave',
     order: 4,
-    lat: 40.654,
-    lon: -73.9427,
     major_ft: 80,
     minor_ft: 36,
     channels: ['veh-major', 'veh-minor', 'ped-major', 'ped-minor'],
@@ -131,11 +125,9 @@ const SPECS = [
     tab_name: 'Utica_Ave',
     name: 'Utica Ave',
     order: 5,
-    lat: 40.6548,
-    lon: -73.933,
     major_ft: 96,
     minor_ft: 44,
-    channels: ['veh-major', 'veh-major-lt', 'veh-minor', 'ped-major', 'ped-minor'],
+    channels: ['veh-major', 'veh-major-lt', 'veh-minor', 'ped-major', 'ped-minor', 'veh-unassigned'],
     groups: [
       {
         label: 'Phase A',
@@ -162,8 +154,6 @@ const SPECS = [
     tab_name: 'Rockaway_Pkwy',
     name: 'Rockaway Pkwy',
     order: 6,
-    lat: 40.6595,
-    lon: -73.902,
     major_ft: 88,
     minor_ft: 42,
     channels: ['veh-major', 'veh-minor', 'ped-major', 'ped-minor'],
@@ -193,6 +183,7 @@ const CHANNEL_DEFS = {
   'veh-minor': { kind: 'vehicle', movement_class: 'Minor' },
   'ped-major': { kind: 'pedestrian', movement_class: 'Major' },
   'ped-minor': { kind: 'pedestrian', movement_class: 'Minor' },
+  'veh-unassigned': { kind: 'vehicle', movement_class: null },
 }
 
 function buildIntersection(spec, id) {
@@ -267,8 +258,8 @@ export const mockDataSource = {
       tab_name: spec.tab_name,
       name: spec.name,
       natural_order: spec.order,
-      lat: spec.lat,
-      lon: spec.lon,
+      lat: null,
+      lon: null,
     }))
   },
 

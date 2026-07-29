@@ -12,7 +12,7 @@ export default function OverviewTab({ intersection, channels, splits, plans }) {
   const stats = [
     ['Channels', channels.length],
     ['Phase groups', groupCount],
-    ['Splits', splits.length],
+    ['Intervals', splits.length],
     ['Timing plans', plans.length],
   ]
 

@@ -44,7 +44,14 @@
   color: var(--steel-soft);
 }
 
-.drawer__close {
+.drawer__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.drawer__icon-btn {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -58,9 +65,123 @@
   flex-shrink: 0;
 }
 
-.drawer__close:hover {
+.drawer__icon-btn:hover {
   background: var(--paper);
   color: var(--ink);
+}
+
+/* ---- expanded (near full-screen) mode ------------------------------- */
+
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 36, 56, 0.45);
+  z-index: 1290;
+}
+
+.drawer--expanded {
+  position: fixed;
+  inset: 20px;
+  z-index: 1300;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  box-shadow: 0 20px 60px rgba(20, 36, 56, 0.4);
+  max-width: 1680px;
+  margin: 0 auto;
+}
+
+.drawer__jumplinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--line);
+  background: var(--paper);
+  flex-shrink: 0;
+}
+
+.drawer__jumplink {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--route);
+  text-decoration: none;
+  padding: 5px 10px;
+  border: 1px solid var(--route-soft);
+  border-radius: 999px;
+}
+
+.drawer__jumplink:hover {
+  background: var(--surface);
+  border-color: var(--route);
+}
+
+.drawer__body--expanded {
+  background: var(--paper);
+}
+
+.drawer__sections {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding: 20px;
+}
+
+.drawer__section {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  scroll-margin-top: 12px;
+  width: 100%;
+  max-width: 760px;
+}
+
+/* The merged phasing+timing section carries far more columns than the
+   others, so let it use the full width of the expanded drawer instead of
+   being capped at the same width as Overview/Channels. */
+.drawer__section--wide {
+  max-width: 100%;
+}
+
+.drawer__section-title {
+  margin: 0;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--line);
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+/* Visual seam between the phasing columns and the timing-plan columns in
+   the combined table, so "side by side" reads clearly at a glance. */
+.combo-table__group-head {
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 10.5px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--route);
+  background: var(--paper);
+  border-bottom: 1px solid var(--line-strong);
+}
+
+.combo-table__col-divider {
+  border-left: 2px solid var(--line-strong);
+}
+
+@media (max-width: 720px) {
+  .drawer--expanded {
+    inset: 10px;
+  }
+  .drawer__sections {
+    padding: 12px;
+  }
 }
 
 .drawer__state {
@@ -139,6 +260,7 @@
   gap: 12px;
   padding: 8px 12px;
   font-size: 13px;
+  min-width: 0;
 }
 
 .field-list__row:not(:last-child) {
@@ -148,6 +270,7 @@
 .field-list__row dt {
   color: var(--steel-soft);
   font-family: var(--font-body);
+  flex-shrink: 0;
 }
 
 .field-list__row dd {
@@ -155,6 +278,8 @@
   font-family: var(--font-mono);
   color: var(--ink);
   text-align: right;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .stat-grid {

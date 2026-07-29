@@ -1,15 +1,8 @@
 import IndicationChip from '../IndicationChip'
+import { groupIntervalsByPhase } from '../../utils/groupIntervals'
 
 export default function PhasingTab({ channels, splits }) {
-  const groups = []
-  for (const split of splits) {
-    let group = groups.find((g) => g.label === split.phase_group_label)
-    if (!group) {
-      group = { label: split.phase_group_label, splits: [] }
-      groups.push(group)
-    }
-    group.splits.push(split)
-  }
+  const groups = groupIntervalsByPhase(splits)
 
   return (
     <div className="tab-panel tab-panel--wide">
@@ -18,7 +11,7 @@ export default function PhasingTab({ channels, splits }) {
           <thead>
             <tr>
               <th className="phasing-table__band-col">Phase</th>
-              <th>Split</th>
+              <th>Interval</th>
               <th>Role</th>
               {channels.map((ch) => (
                 <th key={ch.id} className="phasing-table__channel-head">
@@ -30,20 +23,20 @@ export default function PhasingTab({ channels, splits }) {
           </thead>
           <tbody>
             {groups.map((group) =>
-              group.splits.map((split, idx) => (
-                <tr key={split.id}>
+              group.intervals.map((interval, idx) => (
+                <tr key={interval.id}>
                   {idx === 0 && (
                     <td
                       className="phasing-table__band-col phasing-table__band"
-                      rowSpan={group.splits.length}
+                      rowSpan={group.intervals.length}
                     >
                       {group.label}
                     </td>
                   )}
-                  <td className="sheet-table__num">{split.split_number}</td>
-                  <td className="phasing-table__role">{split.role || '—'}</td>
+                  <td className="sheet-table__num">{interval.split_number}</td>
+                  <td className="phasing-table__role">{interval.role || '—'}</td>
                   {channels.map((ch) => {
-                    const ind = split.indications.find((i) => i.channel_number === ch.channel_number)
+                    const ind = interval.indications.find((i) => i.channel_number === ch.channel_number)
                     return (
                       <td key={ch.id} className="phasing-table__cell">
                         {ind ? <IndicationChip code={ind.code} /> : <span className="phasing-table__dash">·</span>}

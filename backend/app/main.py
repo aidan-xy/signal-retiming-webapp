@@ -6,7 +6,7 @@ corridors have been imported. No write endpoints -- loading data is
 import_workbook.py's job, not this API's.
 
 Run:
-    export SIGNALS_DSN="postgresql://signals_ro@localhost/signals"
+    export SIGNALS_DSN="postgresql://username:password@localhost/signals"
     uvicorn app.main:app --reload
 """
 

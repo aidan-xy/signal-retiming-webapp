@@ -5,7 +5,7 @@ export default function TimingPlansTab({ splits, plans }) {
         <table className="sheet-table timing-table">
           <thead>
             <tr>
-              <th>Split</th>
+              <th>Interval</th>
               <th>Role</th>
               <th>Phase</th>
               {plans.map((plan) => (

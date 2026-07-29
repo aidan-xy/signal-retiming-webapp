@@ -1,26 +1,19 @@
 /**
- * Fallback geometry for placing markers when the API doesn't supply
- * lat/lon (schema.sql has no coordinate columns yet). Anchors trace the
- * approximate real path of Linden Blvd through Brooklyn, west (Flatbush
- * Ave) to east (Brownsville); intersections are then placed along that
- * path by arc-length fraction, in natural_order.
+ * Marker placement for the corridor map.
  *
- * Adding real lat/lon columns to `intersections` would let the API report
- * exact coordinates and make this file unnecessary -- see client.js.
+ * Placement priority, per intersection:
+ *   1. lat/lon already on the record (once the API/schema carries real
+ *      coordinates, this wins outright -- see client.js).
+ *   2. A name match against REAL_CORRIDOR_INTERSECTIONS, the real surveyed
+ *      points extracted from NYCDOT's TO14 signal KMZ (corridorCoordinates.js).
+ *   3. Interpolation along the real corridor path by arc-length fraction,
+ *      for anything that doesn't match -- e.g. a demo/sample intersection
+ *      that isn't part of the actual corridor.
  */
 
-export const CORRIDOR_ANCHORS = [
-  [40.6525, -73.9544],
-  [40.6531, -73.9498],
-  [40.6536, -73.9459],
-  [40.654, -73.9427],
-  [40.6548, -73.933],
-  [40.658, -73.913],
-  [40.6595, -73.902],
-  [40.662, -73.888],
-  [40.664, -73.872],
-  [40.665, -73.862],
-]
+import { lookupRealCoordinates, REAL_CORRIDOR_PATH } from './corridorCoordinates'
+
+export const CORRIDOR_ANCHORS = REAL_CORRIDOR_PATH
 
 function planarDistance([lat1, lon1], [lat2, lon2]) {
   const dLat = lat2 - lat1
@@ -59,6 +52,10 @@ export function placeIntersections(intersections) {
   const n = sorted.length
   return sorted.map((item, i) => {
     if (item.lat != null && item.lon != null) return item
+
+    const real = lookupRealCoordinates(item.name, item.tab_name)
+    if (real) return { ...item, lat: real[0], lon: real[1] }
+
     const fraction = n <= 1 ? 0 : i / (n - 1)
     const [lat, lon] = pointAtFraction(fraction)
     return { ...item, lat, lon }
