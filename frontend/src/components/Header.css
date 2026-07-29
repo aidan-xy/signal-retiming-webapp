@@ -1,0 +1,112 @@
+.app-header {
+  height: var(--header-h);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 20px;
+  background: var(--ink);
+  color: var(--paper);
+  border-bottom: 3px solid var(--route);
+  flex-shrink: 0;
+}
+
+.app-header__title {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  min-width: 0;
+}
+
+.app-header__eyebrow {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--route-soft);
+  white-space: nowrap;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.app-header__borough {
+  font-weight: 400;
+  color: var(--route-soft);
+}
+
+.app-header__meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.app-header__pill {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border: 1px solid rgba(246, 247, 249, 0.3);
+  border-radius: var(--radius);
+  color: var(--paper);
+  white-space: nowrap;
+}
+
+.app-header__count {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--route-soft);
+  white-space: nowrap;
+  display: none;
+}
+
+.app-header__source {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--route-soft);
+  white-space: nowrap;
+}
+
+.app-header__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.app-header__source.is-live .app-header__dot {
+  background: #4fae7c;
+}
+
+.app-header__source.is-sample .app-header__dot {
+  background: #d1a23e;
+}
+
+@media (min-width: 900px) {
+  .app-header__count {
+    display: inline;
+  }
+}
+
+@media (max-width: 560px) {
+  .app-header h1 {
+    font-size: 16px;
+  }
+  .app-header__eyebrow {
+    display: none;
+  }
+}

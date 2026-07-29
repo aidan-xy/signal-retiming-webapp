@@ -1,0 +1,54 @@
+.chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  padding: 2px 6px;
+  border-radius: var(--radius);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  line-height: 1.6;
+  border: 1px solid transparent;
+}
+
+.chip--green {
+  background: var(--signal-green-bg);
+  color: var(--signal-green);
+  border-color: color-mix(in srgb, var(--signal-green) 25%, transparent);
+}
+
+.chip--amber {
+  background: var(--signal-amber-bg);
+  color: var(--signal-amber);
+  border-color: color-mix(in srgb, var(--signal-amber) 25%, transparent);
+}
+
+.chip--red {
+  background: var(--signal-red-bg);
+  color: var(--signal-red);
+  border-color: color-mix(in srgb, var(--signal-red) 25%, transparent);
+}
+
+.chip--walk {
+  background: var(--signal-green-bg);
+  color: var(--signal-green);
+  border: 1px dashed color-mix(in srgb, var(--signal-green) 45%, transparent);
+}
+
+.chip--neutral {
+  background: var(--signal-neutral-bg);
+  color: var(--signal-neutral);
+  border-color: var(--line);
+}
+
+.chip--flashing {
+  background-image: repeating-linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--signal-neutral) 14%, transparent) 0px,
+    color-mix(in srgb, var(--signal-neutral) 14%, transparent) 3px,
+    transparent 3px,
+    transparent 6px
+  );
+}

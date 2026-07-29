@@ -1,0 +1,377 @@
+.drawer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--surface);
+  border-left: 1px solid var(--line);
+}
+
+.drawer__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px 14px;
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+}
+
+.drawer__title {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+}
+
+.drawer__pin {
+  color: var(--route);
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+
+.drawer__title h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.25;
+}
+
+.drawer__subtitle {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--steel-soft);
+}
+
+.drawer__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--steel);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.drawer__close:hover {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.drawer__state {
+  padding: 24px 18px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--steel-soft);
+}
+
+.drawer__state--error {
+  color: var(--signal-red);
+}
+
+.drawer__tabs {
+  display: flex;
+  gap: 2px;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+  overflow-x: auto;
+}
+
+.drawer__tab {
+  appearance: none;
+  border: none;
+  background: none;
+  padding: 10px 12px 9px;
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--steel-soft);
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.drawer__tab:hover {
+  color: var(--ink);
+}
+
+.drawer__tab.is-active {
+  color: var(--ink);
+  border-bottom-color: var(--amber);
+}
+
+.drawer__body {
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* ---- shared tab-content primitives ---------------------------------- */
+
+.tab-panel {
+  padding: 18px;
+}
+
+.tab-panel--wide {
+  padding: 18px 0 18px 18px;
+}
+
+.field-list {
+  margin: 0 0 20px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.field-list__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+.field-list__row:not(:last-child) {
+  border-bottom: 1px solid var(--line);
+}
+
+.field-list__row dt {
+  color: var(--steel-soft);
+  font-family: var(--font-body);
+}
+
+.field-list__row dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  color: var(--ink);
+  text-align: right;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.stat-grid__cell {
+  background: var(--surface);
+  padding: 12px 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.stat-grid__value {
+  font-family: var(--font-mono);
+  font-size: 19px;
+  font-weight: 600;
+  color: var(--route);
+}
+
+.stat-grid__label {
+  font-family: var(--font-display);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--steel-soft);
+}
+
+.sheet-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.sheet-table th {
+  text-align: left;
+  font-family: var(--font-display);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--steel);
+  background: var(--paper);
+  border-bottom: 1px solid var(--line-strong);
+  padding: 7px 10px;
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+}
+
+.sheet-table td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+  vertical-align: middle;
+}
+
+.sheet-table tbody tr:hover td {
+  background: var(--paper);
+}
+
+.sheet-table__num {
+  font-family: var(--font-mono);
+  color: var(--steel);
+}
+
+.kind-tag {
+  font-family: var(--font-display);
+  font-size: 10px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 10px;
+  border: 1px solid var(--line-strong);
+  color: var(--steel);
+}
+
+.kind-tag--pedestrian {
+  color: var(--route);
+  border-color: var(--route-soft);
+}
+
+/* ---- phasing grid ------------------------------------------------------ */
+
+.phasing-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  margin-right: 18px;
+}
+
+.phasing-table__band-col {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--paper);
+  min-width: 76px;
+}
+
+.phasing-table__band {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--ink);
+  border-right: 1px solid var(--line-strong);
+  vertical-align: top !important;
+  background: var(--paper);
+}
+
+.phasing-table__role {
+  font-family: var(--font-body);
+  font-size: 11.5px;
+  color: var(--steel);
+}
+
+.phasing-table__channel-head {
+  display: table-cell;
+  min-width: 66px;
+}
+
+.phasing-table__ch-num {
+  display: block;
+  font-family: var(--font-mono);
+}
+
+.phasing-table__ch-class {
+  display: block;
+  font-family: var(--font-body);
+  font-size: 9.5px;
+  font-weight: 400;
+  text-transform: none;
+  color: var(--steel-soft);
+  letter-spacing: 0;
+}
+
+.phasing-table__cell {
+  text-align: center;
+}
+
+.phasing-table__dash {
+  color: var(--line-strong);
+}
+
+.phasing-legend {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  font-size: 11px;
+  color: var(--steel-soft);
+  padding-right: 18px;
+}
+
+.phasing-legend span {
+  margin-right: 4px;
+}
+
+/* ---- timing plan matrix ------------------------------------------------ */
+
+.timing-table__plan-head {
+  min-width: 108px;
+}
+
+.timing-table__plan-num {
+  display: block;
+  font-family: var(--font-display);
+}
+
+.timing-table__plan-meta {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: none;
+  color: var(--steel-soft);
+  font-weight: 400;
+}
+
+.timing-table__plan-tod {
+  display: block;
+  font-family: var(--font-body);
+  font-size: 9.5px;
+  text-transform: none;
+  color: var(--route);
+  font-weight: 400;
+  white-space: normal;
+}
+
+.timing-table__duration {
+  font-family: var(--font-mono);
+  text-align: right;
+  color: var(--ink);
+}
+
+.timing-table tfoot td {
+  border-top: 1px solid var(--line-strong);
+  border-bottom: none;
+  font-family: var(--font-display);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--steel);
+  padding-top: 8px;
+}
+
+.timing-table__cycle {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--route);
+}

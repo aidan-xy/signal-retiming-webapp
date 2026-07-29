@@ -1,122 +1,83 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
+import { useEffect, useState } from 'react'
+import { MapPinned } from 'lucide-react'
+import Header from './components/Header'
+import MapView from './components/MapView'
+import IntersectionDrawer from './components/IntersectionDrawer'
+import { resolveDataSource } from './api'
+import { placeIntersections } from './utils/corridorPath'
 import './App.css'
 
-function App() {
-  const [count, setCount] = useState(0)
+export default function App() {
+  const [dataSource, setDataSource] = useState(null)
+  const [corridor, setCorridor] = useState(null)
+  const [intersections, setIntersections] = useState([])
+  const [selectedId, setSelectedId] = useState(null)
+  const [status, setStatus] = useState('loading') // loading | ready | error
+
+  useEffect(() => {
+    let cancelled = false
+
+    resolveDataSource()
+      .then(async (source) => {
+        const [corridorData, intersectionList] = await Promise.all([
+          source.getCorridor(),
+          source.getIntersections(),
+        ])
+        if (cancelled) return
+        setDataSource(source)
+        setCorridor(corridorData)
+        setIntersections(placeIntersections(intersectionList))
+        setStatus('ready')
+      })
+      .catch(() => {
+        if (!cancelled) setStatus('error')
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <div className="app">
+      <Header
+        corridor={corridor}
+        dataSourceLabel={dataSource?.label}
+        intersectionCount={intersections.length}
+      />
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
+      <main className="app__body">
+        <div className="app__map">
+          {status === 'ready' && (
+            <MapView
+              intersections={intersections}
+              selectedId={selectedId}
+              onSelect={setSelectedId}
+            />
+          )}
+          {status === 'loading' && <div className="app__status">Loading corridor…</div>}
+          {status === 'error' && (
+            <div className="app__status app__status--error">
+              Couldn't load corridor data.
+            </div>
+          )}
         </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+        <div className={`app__panel ${selectedId ? 'is-open' : ''}`}>
+          {selectedId ? (
+            <IntersectionDrawer
+              intersectionId={selectedId}
+              dataSource={dataSource}
+              onClose={() => setSelectedId(null)}
+            />
+          ) : (
+            <div className="app__panel-hint">
+              <MapPinned size={28} strokeWidth={1.5} />
+              <p>Select an intersection marker to view its existing signal timing.</p>
+            </div>
+          )}
+        </div>
+      </main>
+    </div>
   )
 }
-
-export default App

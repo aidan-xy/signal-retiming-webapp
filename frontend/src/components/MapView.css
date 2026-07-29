@@ -1,0 +1,84 @@
+.map-view {
+  position: relative;
+  height: 100%;
+  width: 100%;
+  background: var(--surface);
+}
+
+.map-view__container {
+  height: 100%;
+  width: 100%;
+  background: var(--paper);
+  font-family: var(--font-body);
+}
+
+/* Leaflet's default pane z-indexing is fine; just mute its chrome to match
+   the plan-sheet palette instead of the stock blue/white. */
+.leaflet-control-attribution {
+  font-family: var(--font-body);
+  font-size: 10px;
+  color: var(--steel-soft);
+  background: rgba(255, 255, 255, 0.85) !important;
+}
+
+.corridor-marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--paper);
+  border: 2px solid var(--surface);
+  box-shadow: 0 1px 3px rgba(20, 36, 56, 0.35);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.12s ease, background 0.12s ease;
+}
+
+.corridor-marker:hover {
+  transform: scale(1.12);
+}
+
+.corridor-marker.is-selected {
+  background: var(--amber);
+  transform: scale(1.18);
+}
+
+.map-view__legend {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font-family: var(--font-display);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--steel);
+  box-shadow: 0 1px 4px rgba(20, 36, 56, 0.12);
+}
+
+.map-view__legend-swatch {
+  display: inline-block;
+  width: 14px;
+  height: 3px;
+  background: var(--route);
+  opacity: 0.7;
+}
+
+@media (max-width: 720px) {
+  .map-view__legend {
+    font-size: 10px;
+    padding: 5px 9px;
+  }
+}

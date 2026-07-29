@@ -13,6 +13,8 @@ Run:
 from __future__ import annotations
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+import os
 from sqlalchemy import text
 
 from .database import engine
@@ -22,6 +24,14 @@ app = FastAPI(
     title="Signal Timing API",
     description="Read-only API over as-built NYCDOT signal timing data.",
     version="0.1.0",
+)
+
+_allow_origins = os.environ.get("CORS_ALLOW_ORIGINS", "*")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"] if _allow_origins == "*" else _allow_origins.split(","),
+    allow_methods=["GET"],
+    allow_headers=["*"],
 )
 
 app.include_router(corridors.router)
