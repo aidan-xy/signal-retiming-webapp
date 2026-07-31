@@ -161,6 +161,7 @@ class TimingPlan(Base):
 
     intersection: Mapped["Intersection"] = relationship(back_populates="timing_plans")
     plan_splits: Mapped[list["PlanSplit"]] = relationship(back_populates="timing_plan")
+    plan_movements: Mapped[list["PlanMovement"]] = relationship(back_populates="timing_plan")
 
 
 class PlanSplit(Base):
@@ -207,3 +208,27 @@ class TodSlot(Base):
     plan_number: Mapped[int]
 
     intersection: Mapped["Intersection"] = relationship(back_populates="tod_slots")
+
+
+class PlanMovement(Base):
+    """
+    Major/Minor approach-level summary for one plan: vehicle green ("Split"),
+    pedestrian WALK, flashing DON'T WALK, and combined yellow+all-red
+    clearance. Read directly from the workbook's own precomputed summary
+    rather than derived from splits/channels -- see schema.sql.
+    """
+
+    __tablename__ = "plan_movements"
+    __table_args__ = (UniqueConstraint("timing_plan_id", "movement_class"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    timing_plan_id: Mapped[int] = mapped_column(
+        ForeignKey("timing_plans.id", ondelete="CASCADE")
+    )
+    movement_class: Mapped[str] = mapped_column(StreetClass)
+    split_s: Mapped[int]
+    wk_s: Mapped[int]
+    fldw_s: Mapped[int]
+    yellow_allred_s: Mapped[int]
+
+    timing_plan: Mapped["TimingPlan"] = relationship(back_populates="plan_movements")

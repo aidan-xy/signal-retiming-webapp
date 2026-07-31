@@ -109,7 +109,15 @@ class PlanTimingRow(BaseModel):
     duration_s: int
 
 
-# ---- timespace map (v_timespace rows) ----------------------------------------
+# ---- timespace map (v_timespace / v_timespace_movements rows) ---------------
+
+class TimespaceMovementOut(BaseModel):
+    movement_class: str   # 'Major' | 'Minor'
+    split_s: int           # vehicle green
+    wk_s: int               # pedestrian WALK
+    fldw_s: int             # pedestrian flashing DON'T WALK
+    yellow_allred_s: int    # combined yellow + all-red clearance
+
 
 class TimespaceSlotOut(BaseModel):
     slot_index: int   # 0 = 00:00 ... 95 = 23:45, 15-minute resolution
@@ -117,6 +125,7 @@ class TimespaceSlotOut(BaseModel):
     plan_number: int
     cycle_length_s: int
     offset_s: int
+    movements: list[TimespaceMovementOut] = []
 
 
 class TimespaceIntersectionOut(BaseModel):

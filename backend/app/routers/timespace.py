@@ -1,9 +1,9 @@
 """
-Endpoint over v_timespace (defined in schema.sql).
+Endpoint over v_timespace_movements (defined in schema.sql).
 
-Same rationale as timing.py: v_timespace has no primary key and isn't an
-entity in its own right, so it's queried with Core/text rather than mapped
-as an ORM class.
+Same rationale as timing.py: the underlying views have no primary key and
+aren't entities in their own right, so they're queried with Core/text rather
+than mapped as ORM classes.
 
 Powers the timespace map's two views:
   - table (Excel-like grid): the frontend fetches the whole day once per
@@ -14,6 +14,12 @@ Powers the timespace map's two views:
     every drag. The slot_index/time filters below exist for callers that
     want a single instant resolved server-side instead (e.g. a shareable
     link to one point in time).
+
+Each slot carries the plan's cycle length + offset (when its cycle starts)
+plus, per Major/Minor movement, how much of that cycle is vehicle green
+("split"), pedestrian WALK, flashing DON'T WALK, and yellow+all-red
+clearance -- everything the map needs to draw progression bands, not just
+mark which plan is active.
 """
 
 from __future__ import annotations
@@ -30,7 +36,7 @@ from ..database import get_db
 
 router = APIRouter(prefix="/corridors", tags=["timespace"])
 
-_BASE_QUERY = "SELECT * FROM v_timespace"
+_BASE_QUERY = "SELECT * FROM v_timespace_movements"
 
 SLOT_MINUTES = 15
 SLOTS_PER_DAY = 24 * 60 // SLOT_MINUTES  # 96
@@ -65,37 +71,54 @@ def get_timespace(
     if slot_index is not None:
         sql += " AND slot_index = :slot_index"
         params["slot_index"] = slot_index
-    sql += " ORDER BY natural_order, slot_index"
+    sql += " ORDER BY natural_order, slot_index, movement_class"
 
     rows = db.execute(text(sql), params).mappings().all()
 
     by_intersection: dict[int, schemas.TimespaceIntersectionOut] = {}
     order: list[int] = []
+    slots_by_key: dict[tuple[int, int], schemas.TimespaceSlotOut] = {}
+
     for row in rows:
-        key = row["intersection_id"]
-        if key not in by_intersection:
-            by_intersection[key] = schemas.TimespaceIntersectionOut(
+        ikey = row["intersection_id"]
+        if ikey not in by_intersection:
+            by_intersection[ikey] = schemas.TimespaceIntersectionOut(
                 intersection_id=row["intersection_id"],
                 tab_name=row["tab_name"],
                 name=row["intersection"],
                 natural_order=row["natural_order"],
                 slots=[],
             )
-            order.append(key)
-        by_intersection[key].slots.append(
-            schemas.TimespaceSlotOut(
+            order.append(ikey)
+
+        skey = (ikey, row["slot_index"])
+        slot = slots_by_key.get(skey)
+        if slot is None:
+            slot = schemas.TimespaceSlotOut(
                 slot_index=row["slot_index"],
                 slot_time=row["slot_time"].strftime("%H:%M"),
                 plan_number=row["plan_number"],
                 cycle_length_s=row["cycle_length_s"],
                 offset_s=row["offset_s"],
+                movements=[],
+            )
+            slots_by_key[skey] = slot
+            by_intersection[ikey].slots.append(slot)
+
+        slot.movements.append(
+            schemas.TimespaceMovementOut(
+                movement_class=row["movement_class"],
+                split_s=row["split_s"],
+                wk_s=row["wk_s"],
+                fldw_s=row["fldw_s"],
+                yellow_allred_s=row["yellow_allred_s"],
             )
         )
 
     if not by_intersection:
         raise HTTPException(
             status_code=404,
-            detail="no timespace data for this corridor/day_type -- has import_timespace_slots.py been run?",
+            detail="no timespace data for this corridor/day_type -- has import_workbook.py been run?",
         )
 
     return schemas.TimespaceGridOut(

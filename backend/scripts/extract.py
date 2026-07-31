@@ -32,6 +32,23 @@ Like the main timing block, this column is NOT at a fixed letter -- Kings_Hwy's
 extra channels/phase groups shift it right (AX/AY everywhere else, BF/BG at
 Kings_Hwy), so it's located by scanning row 14 for the header text, not
 hardcoded.
+
+A second summary block (further right, rows ~65-92 on a standard tab, shifted
+to ~76-103 on Kings_Hwy) gives the same Existing plans' approach-level detail
+the Time_SpaceMap tab draws bands from: per plan, the Major and Minor
+streets' vehicle green ("Split"), pedestrian WALK ("WK"), flashing DON'T WALK
+("FLDW"), and combined yellow+all-red clearance ("Y+AR"). This is *not*
+re-derivable by summing split_indications per channel.movement_class: several
+tabs (Kings_Hwy, E_58_St) have more than one vehicle channel sharing the same
+movement_class (e.g. a through + a protected-left channel both tagged
+'Major'), so a generic per-channel sum would double-count. The workbook
+resolves that ambiguity by hand, pointing each of these eight cells at one
+specific channel per tab -- so, like the TOD slot columns above, these are
+read as the workbook's own precomputed answer rather than re-derived.
+The block is a fixed template relative to its own 'MajorG' anchor cell (see
+_read_plan_movements), which is located by scanning rather than hardcoding
+row/column, since that anchor itself moves tab to tab exactly like everything
+else here.
 """
 
 from __future__ import annotations
@@ -67,6 +84,40 @@ TOD_SLOT_HEADERS = {
     "weekend": "WeekendExistingPlan",
 }
 
+# Approach-level movement summary block: an anchor cell ('MajorG') plus fixed
+# row/column offsets from it -- verified stable across every tab, including
+# Kings_Hwy where the anchor itself sits at a different row/column than
+# everywhere else. One column per plan, starting 3 columns right of the
+# anchor's column and going left-to-right in plan_number order (1, 2, 3, ...);
+# this requires plan numbers to be contiguous starting at 1, which is
+# validated before use (see _read_plan_movements).
+MOVEMENT_ANCHOR_LABEL = "MajorG"
+MOVEMENT_VALUE_COL_OFFSET = 3   # anchor col -> first plan's value column
+MOVEMENT_ROW_OFFSETS = {
+    # (movement_class, metric): row offset from the 'MajorG' anchor row
+    ("Major", "split_s"): 7,          # 'MajorSplit'
+    ("Major", "wk_s"): 5,             # 'MajorWK'
+    ("Major", "fldw_s"): 6,           # 'MajorFLDW'
+    ("Major", "yellow_allred_s"): 9,  # 'MajorY+AR'
+    ("Minor", "split_s"): 12 + 7,     # 'MinorSplit'  (Minor block starts +12 rows)
+    ("Minor", "wk_s"): 12 + 5,        # 'MinorWK'
+    ("Minor", "fldw_s"): 12 + 6,      # 'MinorFLDW'
+    ("Minor", "yellow_allred_s"): 12 + 9,  # 'MinorY+AR'
+}
+# What _text() must read at each offset -- a defensive check, not a lookup:
+# if the workbook's layout ever drifts, this fails loudly instead of quietly
+# reading the wrong cell.
+MOVEMENT_ROW_LABELS = {
+    ("Major", "split_s"): "MajorSplit",
+    ("Major", "wk_s"): "MajorWK",
+    ("Major", "fldw_s"): "MajorFLDW",
+    ("Major", "yellow_allred_s"): "MajorY+AR",
+    ("Minor", "split_s"): "MinorSplit",
+    ("Minor", "wk_s"): "MinorWK",
+    ("Minor", "fldw_s"): "MinorFLDW",
+    ("Minor", "yellow_allred_s"): "MinorY+AR",
+}
+
 PHASE_LABEL_RE = re.compile(r"^PHASE\s+([A-Z])$", re.IGNORECASE)
 
 
@@ -97,12 +148,22 @@ class PhaseGroup:
 
 
 @dataclass
+class MovementSummary:
+    movement_class: str    # 'Major' | 'Minor'
+    split_s: int            # vehicle green ("Split")
+    wk_s: int                # pedestrian WALK
+    fldw_s: int              # pedestrian flashing DON'T WALK
+    yellow_allred_s: int     # combined yellow + all-red clearance
+
+
+@dataclass
 class TimingPlan:
     plan_number: int
     cycle_length_s: int
     offset_s: int
     tod_description: str | None
     durations: dict[int, int] = field(default_factory=dict)  # split_number -> seconds
+    movements: list[MovementSummary] = field(default_factory=list)  # Major + Minor summary
 
 
 @dataclass
@@ -341,6 +402,63 @@ def _read_tod_slots(ws, known_plan_numbers: set[int]) -> list[TodSlot]:
     return slots
 
 
+def _find_movement_anchor(ws) -> tuple[int, int]:
+    """(row, col) of the 'MajorG' cell that anchors the movement summary block."""
+    for row in range(1, MAX_SCAN_COL):
+        for col in range(1, MAX_SCAN_COL):
+            if _text(ws, row, col) == MOVEMENT_ANCHOR_LABEL:
+                return row, col
+    raise LayoutError(f"no {MOVEMENT_ANCHOR_LABEL!r} anchor cell found")
+
+
+def _read_plan_movements(ws, plan_numbers: list[int]) -> dict[int, list[MovementSummary]]:
+    """
+    Read the Major/Minor Split/WK/FLDW/Y+AR summary block into
+    {plan_number: [MovementSummary(Major), MovementSummary(Minor)]}.
+
+    Requires plan_numbers to be contiguous starting at 1 -- that's how this
+    block's plan columns are addressed (no plan-number header of its own to
+    match against, unlike _read_plans/_read_tod_slots).
+    """
+    if plan_numbers != list(range(1, len(plan_numbers) + 1)):
+        raise LayoutError(
+            f"movement summary block assumes plan numbers 1..N contiguous, got {plan_numbers}"
+        )
+
+    anchor_row, anchor_col = _find_movement_anchor(ws)
+    value_start_col = anchor_col + MOVEMENT_VALUE_COL_OFFSET
+
+    by_plan: dict[int, dict[str, dict[str, int]]] = {
+        n: {"Major": {}, "Minor": {}} for n in plan_numbers
+    }
+    for (movement_class, metric), row_offset in MOVEMENT_ROW_OFFSETS.items():
+        row = anchor_row + row_offset
+        label = MOVEMENT_ROW_LABELS[(movement_class, metric)]
+        actual_label = _text(ws, row, anchor_col)
+        if actual_label != label:
+            raise LayoutError(
+                f"expected {label!r} at row {row} (anchor+{row_offset}), col "
+                f"{get_column_letter(anchor_col)}, found {actual_label!r}"
+            )
+        for plan_number in plan_numbers:
+            col = value_start_col + (plan_number - 1)
+            value = _int(ws, row, col)
+            if value is None:
+                raise LayoutError(
+                    f"{label} for plan {plan_number} ({get_column_letter(col)}{row}) "
+                    "is blank/#N/A"
+                )
+            by_plan[plan_number][movement_class][metric] = value
+
+    return {
+        n: [
+            MovementSummary(movement_class=mc, **metrics)
+            for mc, metrics in movements.items()
+        ]
+        for n, movements in by_plan.items()
+    }
+
+
 # --------------------------------------------------------------------------
 # validation
 # --------------------------------------------------------------------------
@@ -383,6 +501,9 @@ def extract_intersection(ws, tab_name: str, display_name: str,
     splits = _read_splits(ws, groups, channels)
     plans = _read_plans(ws, existing_col, off_label_row, splits)
     tod_slots = _read_tod_slots(ws, known_plan_numbers={p.plan_number for p in plans})
+    movements_by_plan = _read_plan_movements(ws, [p.plan_number for p in plans])
+    for plan in plans:
+        plan.movements = movements_by_plan[plan.plan_number]
 
     # Crosswalk widths live just below the timing block, labelled in column B.
     major = minor = None

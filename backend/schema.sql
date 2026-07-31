@@ -122,9 +122,35 @@ CREATE TABLE plan_splits (
     UNIQUE (timing_plan_id, split_id)
 );
 
+-- -----------------------------------------------------------------------------
+-- Approach-level movement summary, per plan: the Major and Minor streets'
+-- vehicle green ("Split"), pedestrian WALK, flashing DON'T WALK, and combined
+-- yellow+all-red clearance -- the numbers the workbook's own Time_SpaceMap
+-- tab draws progression bands from.
+--
+-- Deliberately not derived from splits/split_indications by summing
+-- duration_s per channel.movement_class: several intersections (e.g.
+-- Kings_Hwy, E_58_St) have more than one vehicle channel sharing the same
+-- movement_class (a through + a protected-left channel both tagged 'Major'),
+-- so a generic per-channel sum would double-count. These values are read
+-- directly from the workbook's own precomputed summary instead -- see
+-- extract.py's _read_plan_movements.
+-- -----------------------------------------------------------------------------
+CREATE TABLE plan_movements (
+    id                serial PRIMARY KEY,
+    timing_plan_id    integer NOT NULL REFERENCES timing_plans(id) ON DELETE CASCADE,
+    movement_class    street_class NOT NULL,
+    split_s           integer NOT NULL CHECK (split_s >= 0),
+    wk_s              integer NOT NULL CHECK (wk_s >= 0),
+    fldw_s            integer NOT NULL CHECK (fldw_s >= 0),
+    yellow_allred_s   integer NOT NULL CHECK (yellow_allred_s >= 0),
+    UNIQUE (timing_plan_id, movement_class)
+);
+
 CREATE INDEX ix_intersections_corridor    ON intersections (corridor_id, natural_order);
 CREATE INDEX ix_splits_intersection       ON splits (intersection_id, split_number);
 CREATE INDEX ix_plan_splits_plan          ON plan_splits (timing_plan_id);
+CREATE INDEX ix_plan_movements_plan       ON plan_movements (timing_plan_id);
 CREATE INDEX ix_indications_split         ON split_indications (split_id);
 CREATE INDEX ix_timing_plans_intersection ON timing_plans (intersection_id);
 
@@ -205,5 +231,36 @@ JOIN timing_plans  tp ON tp.intersection_id = ts.intersection_id
                      AND tp.plan_number      = ts.plan_number
 JOIN intersections i  ON i.id = ts.intersection_id
 JOIN corridors     c  ON c.id = i.corridor_id;
+
+-- -----------------------------------------------------------------------------
+-- Convenience view: v_timespace plus the Major/Minor movement breakdown --
+-- one row per (intersection, day_type, slot_index, movement_class), i.e. two
+-- rows per v_timespace row. This is what the timespace map's band drawing
+-- needs: cycle length + offset (when the cycle starts) plus, per approach,
+-- how much of that cycle is green/WK/FLDW/clearance.
+-- -----------------------------------------------------------------------------
+CREATE VIEW v_timespace_movements AS
+SELECT i.id                                            AS intersection_id,
+       c.name                                          AS corridor,
+       i.tab_name,
+       i.name                                          AS intersection,
+       i.natural_order,
+       ts.day_type,
+       ts.slot_index,
+       (ts.slot_index * interval '15 minutes')::time   AS slot_time,
+       tp.plan_number,
+       tp.cycle_length_s,
+       tp.offset_s,
+       pm.movement_class,
+       pm.split_s,
+       pm.wk_s,
+       pm.fldw_s,
+       pm.yellow_allred_s
+FROM tod_slots       ts
+JOIN timing_plans    tp ON tp.intersection_id = ts.intersection_id
+                       AND tp.plan_number      = ts.plan_number
+JOIN plan_movements  pm ON pm.timing_plan_id = tp.id
+JOIN intersections   i  ON i.id = ts.intersection_id
+JOIN corridors       c  ON c.id = i.corridor_id;
 
 COMMIT;

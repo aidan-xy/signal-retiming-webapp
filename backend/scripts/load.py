@@ -144,6 +144,18 @@ def load_intersection(cur, corridor_id: int, inter: Intersection,
                 "INSERT INTO plan_splits (timing_plan_id, split_id, duration_s) VALUES %s",
                 rows,
             )
+        if plan.movements:
+            movement_rows = [
+                (pid, m.movement_class, m.split_s, m.wk_s, m.fldw_s, m.yellow_allred_s)
+                for m in plan.movements
+            ]
+            psycopg2.extras.execute_values(
+                cur,
+                """INSERT INTO plan_movements
+                       (timing_plan_id, movement_class, split_s, wk_s, fldw_s, yellow_allred_s)
+                   VALUES %s""",
+                movement_rows,
+            )
 
     # time-of-day slots: which plan is active per 15-min slot, per day type.
     # Keyed by (intersection_id, plan_number) -- matching tod_slots' composite
