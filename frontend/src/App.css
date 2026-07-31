@@ -10,6 +10,16 @@
   min-height: 0;
 }
 
+.app__body--timespace {
+  flex-direction: column;
+}
+
+.app__body--timespace > * {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+}
+
 .app__map {
   flex: 1;
   min-width: 0;

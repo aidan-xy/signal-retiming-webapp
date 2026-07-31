@@ -245,6 +245,70 @@ function buildIntersection(spec, id) {
 
 const DETAILS = new Map(SPECS.map((spec, i) => [i + 1, buildIntersection(spec, i + 1)]))
 
+// ---- timespace map (sample-data fallback) ----------------------------------
+//
+// The real backend resolves which plan is active per 15-minute slot from the
+// workbook's own precomputed lookup table (see import_workbook.py), and reads
+// each plan's Major/Minor Split/WK/FLDW/Y+AR breakdown from the workbook's
+// own summary block rather than deriving it. Neither of those source tables
+// exists for this sample corridor, so both are approximated here, only to
+// keep the timespace page explorable without a running backend:
+//   - plan resolution: each sample intersection has exactly two plans (an AM
+//     plan and an "everything else" plan, per their tod_description); the AM
+//     plan is used for the 06:00-09:00 window on weekdays, the other plan
+//     covers the rest of the day and all of the weekend.
+//   - movement breakdown: summed directly from this intersection's own
+//     splits/channels/indications, which is only safe here because every
+//     sample intersection has at most one vehicle + one pedestrian channel
+//     per Major/Minor (see the real corridor's extract.py for why that
+//     assumption doesn't hold everywhere).
+
+const SLOT_MINUTES = 15
+const SLOTS_PER_DAY = (24 * 60) / SLOT_MINUTES // 96
+
+function slotIndexToTime(slotIndex) {
+  const totalMinutes = slotIndex * SLOT_MINUTES
+  const h = String(Math.floor(totalMinutes / 60)).padStart(2, '0')
+  const m = String(totalMinutes % 60).padStart(2, '0')
+  return `${h}:${m}`
+}
+
+function resolveSamplePlan(plans, dayType, slotIndex) {
+  if (dayType === 'weekend' || plans.length < 2) return plans[plans.length - 1]
+  const hour = Math.floor(slotIndex / (60 / SLOT_MINUTES))
+  const isAmPeak = hour >= 6 && hour < 9
+  return isAmPeak ? plans[0] : plans[1]
+}
+
+function deriveSampleMovements(splits, channels, plan) {
+  const totals = {
+    Major: { split_s: 0, wk_s: 0, fldw_s: 0, yellow_allred_s: 0 },
+    Minor: { split_s: 0, wk_s: 0, fldw_s: 0, yellow_allred_s: 0 },
+  }
+  const channelByNumber = new Map(channels.map((c) => [c.channel_number, c]))
+
+  for (const split of splits) {
+    const duration = plan.durations[split.split_number] || 0
+    if (!duration) continue
+    for (const ind of split.indications) {
+      const ch = channelByNumber.get(ind.channel_number)
+      if (!ch || !ch.movement_class) continue
+      const bucket = totals[ch.movement_class]
+      if (!bucket) continue
+      const code = ind.code.split('/')[0].trim()
+      if (ch.kind === 'vehicle' && code === 'G') bucket.split_s += duration
+      else if (ch.kind === 'pedestrian' && code === 'WK') bucket.wk_s += duration
+      else if (ch.kind === 'pedestrian' && code === 'FLDW') bucket.fldw_s += duration
+      else if (code === 'Y' || code === 'A') bucket.yellow_allred_s += duration
+    }
+  }
+
+  return [
+    { movement_class: 'Major', ...totals.Major },
+    { movement_class: 'Minor', ...totals.Minor },
+  ]
+}
+
 export const mockDataSource = {
   label: 'sample data',
 
@@ -267,5 +331,31 @@ export const mockDataSource = {
     const detail = DETAILS.get(Number(id))
     if (!detail) throw new Error(`no sample data for intersection ${id}`)
     return detail
+  },
+
+  async getTimespace(dayType) {
+    const intersections = SPECS.map((spec, i) => {
+      const detail = DETAILS.get(i + 1)
+      const slots = []
+      for (let slotIndex = 0; slotIndex < SLOTS_PER_DAY; slotIndex++) {
+        const plan = resolveSamplePlan(detail.plans, dayType, slotIndex)
+        slots.push({
+          slot_index: slotIndex,
+          slot_time: slotIndexToTime(slotIndex),
+          plan_number: plan.plan_number,
+          cycle_length_s: plan.cycle_length_s,
+          offset_s: plan.offset_s,
+          movements: deriveSampleMovements(detail.splits, detail.channels, plan),
+        })
+      }
+      return {
+        intersection_id: i + 1,
+        tab_name: spec.tab_name,
+        name: spec.name,
+        natural_order: spec.order,
+        slots,
+      }
+    })
+    return { corridor: CORRIDOR.name, day_type: dayType, intersections }
   },
 }

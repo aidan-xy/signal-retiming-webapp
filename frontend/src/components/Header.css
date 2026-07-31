@@ -51,6 +51,44 @@
   flex-shrink: 0;
 }
 
+.app-header__nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.app-header__nav-btn {
+  appearance: none;
+  border: none;
+  background: none;
+  padding: 7px 12px;
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: var(--route-soft);
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.app-header__nav-btn:hover {
+  color: var(--paper);
+}
+
+.app-header__nav-btn.is-active {
+  color: var(--paper);
+  border-bottom-color: var(--amber);
+}
+
+@media (max-width: 720px) {
+  .app-header__nav-btn {
+    padding: 7px 8px;
+    font-size: 11px;
+  }
+}
+
 .app-header__pill {
   font-family: var(--font-display);
   font-size: 11px;

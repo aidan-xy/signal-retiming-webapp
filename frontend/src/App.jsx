@@ -3,6 +3,7 @@ import { MapPinned } from 'lucide-react'
 import Header from './components/Header'
 import MapView from './components/MapView'
 import IntersectionDrawer from './components/IntersectionDrawer'
+import TimespaceMapView from './components/TimespaceMapView'
 import { resolveDataSource } from './api'
 import { placeIntersections } from './utils/corridorPath'
 import './App.css'
@@ -13,6 +14,7 @@ export default function App() {
   const [intersections, setIntersections] = useState([])
   const [selectedId, setSelectedId] = useState(null)
   const [status, setStatus] = useState('loading') // loading | ready | error
+  const [page, setPage] = useState('map') // 'map' | 'timespace'
 
   useEffect(() => {
     let cancelled = false
@@ -44,40 +46,50 @@ export default function App() {
         corridor={corridor}
         dataSourceLabel={dataSource?.label}
         intersectionCount={intersections.length}
+        page={page}
+        onPageChange={status === 'ready' ? setPage : undefined}
       />
 
-      <main className="app__body">
-        <div className="app__map">
-          {status === 'ready' && (
-            <MapView
-              intersections={intersections}
-              selectedId={selectedId}
-              onSelect={setSelectedId}
-            />
-          )}
-          {status === 'loading' && <div className="app__status">Loading corridor…</div>}
-          {status === 'error' && (
-            <div className="app__status app__status--error">
-              Couldn't load corridor data.
-            </div>
-          )}
-        </div>
+      {page === 'timespace' && status === 'ready' && dataSource && (
+        <main className="app__body app__body--timespace">
+          <TimespaceMapView dataSource={dataSource} />
+        </main>
+      )}
 
-        <div className={`app__panel ${selectedId ? 'is-open' : ''}`}>
-          {selectedId ? (
-            <IntersectionDrawer
-              intersectionId={selectedId}
-              dataSource={dataSource}
-              onClose={() => setSelectedId(null)}
-            />
-          ) : (
-            <div className="app__panel-hint">
-              <MapPinned size={28} strokeWidth={1.5} />
-              <p>Select an intersection marker to view its existing signal timing.</p>
-            </div>
-          )}
-        </div>
-      </main>
+      {page === 'map' && (
+        <main className="app__body">
+          <div className="app__map">
+            {status === 'ready' && (
+              <MapView
+                intersections={intersections}
+                selectedId={selectedId}
+                onSelect={setSelectedId}
+              />
+            )}
+            {status === 'loading' && <div className="app__status">Loading corridor…</div>}
+            {status === 'error' && (
+              <div className="app__status app__status--error">
+                Couldn't load corridor data.
+              </div>
+            )}
+          </div>
+
+          <div className={`app__panel ${selectedId ? 'is-open' : ''}`}>
+            {selectedId ? (
+              <IntersectionDrawer
+                intersectionId={selectedId}
+                dataSource={dataSource}
+                onClose={() => setSelectedId(null)}
+              />
+            ) : (
+              <div className="app__panel-hint">
+                <MapPinned size={28} strokeWidth={1.5} />
+                <p>Select an intersection marker to view its existing signal timing.</p>
+              </div>
+            )}
+          </div>
+        </main>
+      )}
     </div>
   )
 }

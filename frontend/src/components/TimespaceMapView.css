@@ -1,0 +1,256 @@
+.timespace-page {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--paper);
+
+  /* Categorical plan palette -- muted, drafted hues rather than saturated
+     "app" colors, consistent with the rest of the plan-sheet aesthetic.
+     Cycles if a row has more distinct plans than swatches (rare: 8 plans
+     in one day at one intersection). */
+  --plan-color-0: #d7e6f2;
+  --plan-color-0-ink: #1f4c6e;
+  --plan-color-1: #e3dcf2;
+  --plan-color-1-ink: #4a3a78;
+  --plan-color-2: #ddeee0;
+  --plan-color-2-ink: #1f7a4d;
+  --plan-color-3: #f7ecd9;
+  --plan-color-3-ink: #a8710f;
+  --plan-color-4: #f6e3e3;
+  --plan-color-4-ink: #a63d3d;
+  --plan-color-5: #dcecec;
+  --plan-color-5-ink: #276b6b;
+  --plan-color-6: #ece3d4;
+  --plan-color-6-ink: #7a5a1f;
+  --plan-color-7: #e6e6ee;
+  --plan-color-7-ink: #3c3c6e;
+}
+
+.timespace-page__controls {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 20px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+
+.timespace-page__toggle {
+  display: inline-flex;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.timespace-page__toggle-btn {
+  appearance: none;
+  border: none;
+  background: var(--surface);
+  padding: 7px 16px;
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--steel);
+  cursor: pointer;
+}
+
+.timespace-page__toggle-btn:not(:last-child) {
+  border-right: 1px solid var(--line-strong);
+}
+
+.timespace-page__toggle-btn.is-active {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.timespace-page__measurement {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--steel);
+}
+
+.timespace-page__measurement select {
+  font-family: var(--font-body);
+  font-size: 13px;
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: 400;
+  color: var(--ink);
+  padding: 6px 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.timespace-page__hint {
+  margin: 0;
+  flex: 1;
+  min-width: 240px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--steel-soft);
+}
+
+.timespace-page__status {
+  padding: 32px 20px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--steel-soft);
+}
+
+.timespace-page__status--error {
+  color: var(--signal-red);
+}
+
+/* ---- the grid itself ---------------------------------------------------- */
+
+.timespace-grid-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.timespace-grid {
+  border-collapse: separate;
+  border-spacing: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.timespace-grid__corner,
+.timespace-grid__time-head {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  border-bottom: 2px solid var(--route);
+  white-space: nowrap;
+}
+
+.timespace-grid__corner {
+  left: 0;
+  z-index: 4;
+  min-width: 200px;
+  text-align: left;
+  padding: 8px 12px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.timespace-grid__time-head {
+  min-width: 40px;
+  padding: 6px 3px;
+  text-align: center;
+  font-size: 9.5px;
+  font-family: var(--font-mono);
+  font-weight: 500;
+  border-left: 1px solid rgba(246, 247, 249, 0.14);
+}
+
+.timespace-grid__time-head.is-hour {
+  border-left: 1px solid rgba(246, 247, 249, 0.4);
+  font-weight: 700;
+}
+
+.timespace-grid__row-head {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--surface);
+  border-right: 2px solid var(--route);
+  border-bottom: 1px solid var(--line);
+  padding: 5px 12px;
+  text-align: left;
+  white-space: nowrap;
+  font-weight: 400;
+}
+
+.timespace-grid__row-order {
+  display: inline-block;
+  min-width: 18px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--steel-soft);
+  margin-right: 6px;
+}
+
+.timespace-grid__row-name {
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--ink);
+}
+
+.timespace-grid__cell {
+  min-width: 40px;
+  padding: 3px 4px 5px;
+  text-align: center;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--line);
+  border-left: 1px solid rgba(20, 36, 56, 0.06);
+  color: var(--ink);
+}
+
+.timespace-grid__cell-plan {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 8.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  opacity: 0.62;
+  line-height: 1.3;
+}
+
+.timespace-grid__cell-value {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  line-height: 1.3;
+}
+
+.timespace-grid__cell.is-hour {
+  border-left: 1px solid var(--line-strong);
+}
+
+.timespace-grid tbody tr:hover .timespace-grid__row-head,
+.timespace-grid tbody tr:hover .timespace-grid__cell {
+  filter: brightness(0.96);
+}
+
+/* plan-color assignment -- background carries the "which plan" signal,
+   a matching ink tone keeps the number legible without adding a second,
+   competing hue */
+.plan-color-0 { background: var(--plan-color-0); color: var(--plan-color-0-ink); }
+.plan-color-1 { background: var(--plan-color-1); color: var(--plan-color-1-ink); }
+.plan-color-2 { background: var(--plan-color-2); color: var(--plan-color-2-ink); }
+.plan-color-3 { background: var(--plan-color-3); color: var(--plan-color-3-ink); }
+.plan-color-4 { background: var(--plan-color-4); color: var(--plan-color-4-ink); }
+.plan-color-5 { background: var(--plan-color-5); color: var(--plan-color-5-ink); }
+.plan-color-6 { background: var(--plan-color-6); color: var(--plan-color-6-ink); }
+.plan-color-7 { background: var(--plan-color-7); color: var(--plan-color-7-ink); }
+
+@media (max-width: 720px) {
+  .timespace-page__controls {
+    padding: 12px 14px;
+  }
+  .timespace-page__hint {
+    display: none;
+  }
+}

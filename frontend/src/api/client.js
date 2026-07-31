@@ -72,5 +72,19 @@ export function createApiDataSource(corridorName) {
       )
       return { intersection, channels, splits, plans: pivotPlans(rows) }
     },
+
+    // day_type: 'weekday' | 'weekend'. Returns { corridor, day_type,
+    // intersections: [{ intersection_id, tab_name, name, natural_order,
+    // slots: [{ slot_index, slot_time, plan_number, cycle_length_s,
+    // offset_s, movements: [{ movement_class, split_s, wk_s, fldw_s,
+    // yellow_allred_s }] }] }] } -- one call gets the whole day, 96 slots x
+    // every intersection, so the table and its day-type toggle don't refetch
+    // per cell or per interaction.
+    async getTimespace(dayType) {
+      const corridor = await this.getCorridor()
+      return getJSON(
+        `/corridors/${corridor.id}/timespace?day_type=${encodeURIComponent(dayType)}`
+      )
+    },
   }
 }
