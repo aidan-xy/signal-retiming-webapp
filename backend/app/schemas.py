@@ -107,3 +107,27 @@ class PlanTimingRow(BaseModel):
     split_number: int
     role: Optional[str]
     duration_s: int
+
+
+# ---- timespace map (v_timespace rows) ----------------------------------------
+
+class TimespaceSlotOut(BaseModel):
+    slot_index: int   # 0 = 00:00 ... 95 = 23:45, 15-minute resolution
+    slot_time: str    # "HH:MM", derived from slot_index for display convenience
+    plan_number: int
+    cycle_length_s: int
+    offset_s: int
+
+
+class TimespaceIntersectionOut(BaseModel):
+    intersection_id: int
+    tab_name: str
+    name: str
+    natural_order: int
+    slots: list[TimespaceSlotOut]
+
+
+class TimespaceGridOut(BaseModel):
+    corridor: str
+    day_type: str
+    intersections: list[TimespaceIntersectionOut]

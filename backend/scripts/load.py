@@ -68,7 +68,12 @@ def _upsert_intersection(cur, corridor_id: int, inter: Intersection,
 
 def _clear_children(cur, intersection_id: int) -> None:
     # phase_groups cascades to splits, which cascades to indications and
-    # plan_splits; channels and timing_plans are cleared directly.
+    # plan_splits; channels, timing_plans, and tod_slots are cleared directly.
+    # tod_slots must go before timing_plans -- it has a composite FK onto
+    # timing_plans(intersection_id, plan_number) with ON DELETE CASCADE, but
+    # clearing it explicitly here (rather than relying on that cascade) keeps
+    # this function the single place that answers "what gets wiped".
+    cur.execute("DELETE FROM tod_slots    WHERE intersection_id = %s", (intersection_id,))
     cur.execute("DELETE FROM phase_groups WHERE intersection_id = %s", (intersection_id,))
     cur.execute("DELETE FROM channels     WHERE intersection_id = %s", (intersection_id,))
     cur.execute("DELETE FROM timing_plans WHERE intersection_id = %s", (intersection_id,))
@@ -139,6 +144,21 @@ def load_intersection(cur, corridor_id: int, inter: Intersection,
                 "INSERT INTO plan_splits (timing_plan_id, split_id, duration_s) VALUES %s",
                 rows,
             )
+
+    # time-of-day slots: which plan is active per 15-min slot, per day type.
+    # Keyed by (intersection_id, plan_number) -- matching tod_slots' composite
+    # FK onto timing_plans -- rather than the timing_plan id, so this insert
+    # doesn't need to track pid per plan_number separately.
+    if inter.tod_slots:
+        slot_rows = [
+            (iid, s.day_type, s.slot_index, s.plan_number) for s in inter.tod_slots
+        ]
+        psycopg2.extras.execute_values(
+            cur,
+            """INSERT INTO tod_slots (intersection_id, day_type, slot_index, plan_number)
+               VALUES %s""",
+            slot_rows,
+        )
     return iid
 
 

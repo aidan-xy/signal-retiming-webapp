@@ -72,7 +72,8 @@ def main() -> int:
             warnings += len(inter.warnings)
             flag = f"  ({len(inter.warnings)} warning(s))"
         print(f"  {order:>3}  {tab:<20} {len(inter.timing_plans)} plans, "
-              f"{len(inter.splits)} splits{flag}", file=sys.stderr)
+              f"{len(inter.splits)} splits, {len(inter.tod_slots)} tod slots{flag}",
+              file=sys.stderr)
         for w in inter.warnings:
             print(f"         ! {w}", file=sys.stderr)
 

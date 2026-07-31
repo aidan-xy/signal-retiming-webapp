@@ -2,9 +2,9 @@
 ORM mapping onto the tables defined in schema.sql.
 
 This mirrors the DDL exactly -- it does not create or alter anything
-(no create_all() is ever called; see database.py). The two Postgres enum
-types (channel_kind, street_class) are declared with create_type=False since
-schema.sql already owns them.
+(no create_all() is ever called; see database.py). The three Postgres enum
+types (channel_kind, street_class, day_type) are declared with
+create_type=False since schema.sql already owns them.
 """
 
 from __future__ import annotations
@@ -15,6 +15,7 @@ from typing import Optional
 from sqlalchemy import (
     CheckConstraint,
     ForeignKey,
+    ForeignKeyConstraint,
     Numeric,
     UniqueConstraint,
 )
@@ -25,6 +26,7 @@ from .database import Base
 
 ChannelKind = PgEnum("vehicle", "pedestrian", name="channel_kind", create_type=False)
 StreetClass = PgEnum("Major", "Minor", name="street_class", create_type=False)
+DayType = PgEnum("weekday", "weekend", name="day_type", create_type=False)
 
 
 class Corridor(Base):
@@ -69,6 +71,9 @@ class Intersection(Base):
     )
     timing_plans: Mapped[list["TimingPlan"]] = relationship(
         back_populates="intersection", order_by="TimingPlan.plan_number"
+    )
+    tod_slots: Mapped[list["TodSlot"]] = relationship(
+        back_populates="intersection", order_by="TodSlot.slot_index"
     )
 
 
@@ -171,3 +176,34 @@ class PlanSplit(Base):
 
     timing_plan: Mapped["TimingPlan"] = relationship(back_populates="plan_splits")
     split: Mapped["Split"] = relationship(back_populates="plan_splits")
+
+
+class TodSlot(Base):
+    """
+    Which plan is active at an intersection for a given 15-minute slot of the
+    day (slot_index 0 = 00:00 ... 95 = 23:45), split by weekday/weekend.
+
+    Linked to TimingPlan via the composite (intersection_id, plan_number) FK
+    rather than timing_plan_id directly, so a slot can never reference another
+    intersection's plan by mistake -- see schema.sql.
+    """
+
+    __tablename__ = "tod_slots"
+    __table_args__ = (
+        UniqueConstraint("intersection_id", "day_type", "slot_index"),
+        ForeignKeyConstraint(
+            ["intersection_id", "plan_number"],
+            ["timing_plans.intersection_id", "timing_plans.plan_number"],
+            ondelete="CASCADE",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    intersection_id: Mapped[int] = mapped_column(
+        ForeignKey("intersections.id", ondelete="CASCADE")
+    )
+    day_type: Mapped[str] = mapped_column(DayType)
+    slot_index: Mapped[int]
+    plan_number: Mapped[int]
+
+    intersection: Mapped["Intersection"] = relationship(back_populates="tod_slots")

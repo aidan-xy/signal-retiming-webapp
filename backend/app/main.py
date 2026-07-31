@@ -3,7 +3,8 @@ Thin read API over the signal-timing database.
 
 Scope matches the database: existing ("as-built") timings only, for whatever
 corridors have been imported. No write endpoints -- loading data is
-import_workbook.py's job, not this API's.
+import_workbook.py's (and, for the timespace map, import_timespace_slots.py's)
+job, not this API's.
 
 Run:
     export SIGNALS_DSN="postgresql://username:password@localhost/signals"
@@ -18,7 +19,7 @@ import os
 from sqlalchemy import text
 
 from .database import engine
-from .routers import corridors, intersections, timing
+from .routers import corridors, intersections, timespace, timing
 
 app = FastAPI(
     title="Signal Timing API",
@@ -37,6 +38,7 @@ app.add_middleware(
 app.include_router(corridors.router)
 app.include_router(intersections.router)
 app.include_router(timing.router)
+app.include_router(timespace.router)
 
 
 @app.get("/health", tags=["meta"])

@@ -15,8 +15,23 @@ discovered per sheet from these anchors:
     row 6/7    plan numbers and time-of-day description
     row 16     cycle length per plan
     <offset>   the row labelled 'OFFSET'; values sit on the row below it
+    row 14     'WeekdayExistingPlan' / 'WeekendExistingPlan' headers -> start of the
+               96-row (15-min slot) plan-resolution columns below them
 
 Only the Existing block is read. Proposed timings are out of scope.
+
+The row-14 headers are a second, independent anchor from the row 7
+tod_description text: they mark the workbook's own precomputed day/time ->
+plan lookup table (what the Time_SpaceMap tab's VLOOKUPs read from), already
+expanded to one row per 15-minute slot. tod_description stays free text for
+display/provenance only -- it's not reliably parseable on its own (some
+cells pack multiple disjoint windows into one string), so the slot-level
+resolution is read from these columns directly instead of derived from it.
+
+Like the main timing block, this column is NOT at a fixed letter -- Kings_Hwy's
+extra channels/phase groups shift it right (AX/AY everywhere else, BF/BG at
+Kings_Hwy), so it's located by scanning row 14 for the header text, not
+hardcoded.
 """
 
 from __future__ import annotations
@@ -39,6 +54,18 @@ GROUP_STRIDE = 11         # 10 split rows + 1 subtotal row per phase group
 SPLITS_PER_GROUP = 10
 MAX_PHASE_GROUPS = 8
 MAX_SCAN_COL = 200
+
+# Time-of-day slot resolution table: 96 rows (15-minute slots, 00:00-23:45)
+# below a header row, holding the Existing plan number active in that slot.
+# Same range the Time_SpaceMap tab's own VLOOKUPs (DG16:DI111) read from.
+ROW_TOD_SLOT_HEADER = 14
+TOD_SLOT_FIRST_ROW = 16
+TOD_SLOT_LAST_ROW = 111
+TOD_SLOT_COUNT = TOD_SLOT_LAST_ROW - TOD_SLOT_FIRST_ROW + 1  # 96
+TOD_SLOT_HEADERS = {
+    "weekday": "WeekdayExistingPlan",
+    "weekend": "WeekendExistingPlan",
+}
 
 PHASE_LABEL_RE = re.compile(r"^PHASE\s+([A-Z])$", re.IGNORECASE)
 
@@ -79,6 +106,13 @@ class TimingPlan:
 
 
 @dataclass
+class TodSlot:
+    day_type: str        # 'weekday' | 'weekend'
+    slot_index: int       # 0 = 00:00 ... 95 = 23:45 (15-minute resolution)
+    plan_number: int      # must match a TimingPlan.plan_number on the same intersection
+
+
+@dataclass
 class Intersection:
     tab_name: str
     name: str
@@ -89,6 +123,7 @@ class Intersection:
     phase_groups: list[PhaseGroup]
     splits: list[Split]
     timing_plans: list[TimingPlan]
+    tod_slots: list[TodSlot] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
 
 
@@ -267,6 +302,45 @@ def _read_plans(ws, existing_col: int, off_label_row: int,
     return plans
 
 
+def _find_tod_slot_column(ws, header_text: str) -> int:
+    """Column index below the given row-14 header (e.g. 'WeekdayExistingPlan')."""
+    for col in range(1, MAX_SCAN_COL):
+        if _text(ws, ROW_TOD_SLOT_HEADER, col) == header_text:
+            return col
+    raise LayoutError(f"no {header_text!r} header found in row {ROW_TOD_SLOT_HEADER}")
+
+
+def _read_tod_slots(ws, known_plan_numbers: set[int]) -> list[TodSlot]:
+    """
+    Read the plan-resolution columns into one TodSlot per 15-minute slot per
+    day type (2 * 96 = 192 total).
+
+    Each value must resolve to a plan already read off this same tab by
+    _read_plans -- if it doesn't, either the workbook's own lookup table is
+    stale/broken or these two blocks were misread relative to each other,
+    and either way loading it would produce a tod_slots row with no matching
+    timing_plans row for this intersection.
+    """
+    slots: list[TodSlot] = []
+    for day_type, header_text in TOD_SLOT_HEADERS.items():
+        col = _find_tod_slot_column(ws, header_text)
+        col_letter = get_column_letter(col)
+        for slot_index, row in enumerate(range(TOD_SLOT_FIRST_ROW, TOD_SLOT_LAST_ROW + 1)):
+            n = _int(ws, row, col)
+            if n is None:
+                raise LayoutError(
+                    f"{day_type} plan-resolution cell {col_letter}{row} is blank/#N/A -- "
+                    "workbook's Time_SpaceMap lookup table isn't fully resolved"
+                )
+            if n not in known_plan_numbers:
+                raise LayoutError(
+                    f"{day_type} slot {slot_index} ({col_letter}{row}) resolves to plan "
+                    f"{n}, which isn't among this tab's Existing plans {sorted(known_plan_numbers)}"
+                )
+            slots.append(TodSlot(day_type=day_type, slot_index=slot_index, plan_number=n))
+    return slots
+
+
 # --------------------------------------------------------------------------
 # validation
 # --------------------------------------------------------------------------
@@ -308,6 +382,7 @@ def extract_intersection(ws, tab_name: str, display_name: str,
     groups = _find_phase_groups(ws, off_label_row)
     splits = _read_splits(ws, groups, channels)
     plans = _read_plans(ws, existing_col, off_label_row, splits)
+    tod_slots = _read_tod_slots(ws, known_plan_numbers={p.plan_number for p in plans})
 
     # Crosswalk widths live just below the timing block, labelled in column B.
     major = minor = None
@@ -328,6 +403,7 @@ def extract_intersection(ws, tab_name: str, display_name: str,
         phase_groups=groups,
         splits=splits,
         timing_plans=plans,
+        tod_slots=tod_slots,
     )
     _validate(inter)
     return inter

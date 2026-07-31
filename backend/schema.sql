@@ -2,8 +2,8 @@
 -- Signal timing database -- initial scope: existing ("as-built") timings only.
 --
 -- Source of truth: the per-intersection tabs of the NYCDOT corridor comparison
--- workbook. Proposed timings, the raw IQL controller report, and time-space /
--- corridor analysis are intentionally OUT OF SCOPE for this schema.
+-- workbook. Proposed timings and the raw IQL controller report are
+-- intentionally OUT OF SCOPE for this schema.
 --
 -- Target: PostgreSQL 13+
 -- =============================================================================
@@ -99,8 +99,9 @@ CREATE TABLE split_indications (
 -- -----------------------------------------------------------------------------
 -- Timing plans: one per time-of-day pattern at an intersection.
 -- tod_description is kept as the raw workbook string ('MON-FRI 05:00-10:15');
--- parsing it into discrete day/time windows is deferred -- several entries pack
--- multiple disjoint windows into one cell, so it needs its own modeling pass.
+-- it is provenance/display text only -- tod_slots (below) is the queryable
+-- day/time -> plan resolution, since several tod_description cells pack
+-- multiple disjoint windows into one string.
 -- -----------------------------------------------------------------------------
 CREATE TABLE timing_plans (
     id                serial PRIMARY KEY,
@@ -128,6 +129,35 @@ CREATE INDEX ix_indications_split         ON split_indications (split_id);
 CREATE INDEX ix_timing_plans_intersection ON timing_plans (intersection_id);
 
 -- -----------------------------------------------------------------------------
+-- Time-of-day slots: which plan is active, per intersection, per 15-minute
+-- slot of the day (0 = 00:00 ... 95 = 23:45), split out by weekday/weekend.
+--
+-- Source of truth: each intersection tab's own precomputed helper columns
+-- (WeekdayExistingPlan / WeekendExistingPlan, 96 rows) that the workbook's
+-- Time_SpaceMap tab already reads from -- imported directly rather than
+-- re-parsed out of tod_description, which is free text and not reliably
+-- machine-parseable (see comment on timing_plans above).
+--
+-- The composite FK against timing_plans' own (intersection_id, plan_number)
+-- unique constraint guarantees a slot can never point at another
+-- intersection's plan.
+-- -----------------------------------------------------------------------------
+CREATE TYPE day_type AS ENUM ('weekday', 'weekend');
+
+CREATE TABLE tod_slots (
+    id                serial PRIMARY KEY,
+    intersection_id   integer NOT NULL REFERENCES intersections(id) ON DELETE CASCADE,
+    day_type          day_type NOT NULL,
+    slot_index         smallint NOT NULL CHECK (slot_index BETWEEN 0 AND 95),
+    plan_number        integer NOT NULL,
+    UNIQUE (intersection_id, day_type, slot_index),
+    FOREIGN KEY (intersection_id, plan_number)
+        REFERENCES timing_plans (intersection_id, plan_number) ON DELETE CASCADE
+);
+
+CREATE INDEX ix_tod_slots_intersection ON tod_slots (intersection_id, day_type, slot_index);
+
+-- -----------------------------------------------------------------------------
 -- Convenience view: split durations with everything a UI needs to draw a ring
 -- diagram or a timing table, without a five-way join in application code.
 -- -----------------------------------------------------------------------------
@@ -150,5 +180,30 @@ JOIN splits       s  ON s.id  = ps.split_id
 JOIN phase_groups pg ON pg.id = s.phase_group_id
 JOIN intersections i ON i.id  = tp.intersection_id
 JOIN corridors    c  ON c.id  = i.corridor_id;
+
+-- -----------------------------------------------------------------------------
+-- Convenience view: the timespace map's day/time -> active-plan grid.
+-- One row per (intersection, day_type, slot_index), 15-minute resolution,
+-- carrying the active plan's cycle length and offset so the frontend can
+-- compute progression bands without a second round trip per slot.
+-- -----------------------------------------------------------------------------
+CREATE VIEW v_timespace AS
+SELECT i.id                                            AS intersection_id,
+       c.name                                          AS corridor,
+       i.tab_name,
+       i.name                                          AS intersection,
+       i.natural_order,
+       ts.day_type,
+       ts.slot_index,
+       (ts.slot_index * interval '15 minutes')::time   AS slot_time,
+       tp.plan_number,
+       tp.cycle_length_s,
+       tp.offset_s,
+       tp.tod_description
+FROM tod_slots     ts
+JOIN timing_plans  tp ON tp.intersection_id = ts.intersection_id
+                     AND tp.plan_number      = ts.plan_number
+JOIN intersections i  ON i.id = ts.intersection_id
+JOIN corridors     c  ON c.id = i.corridor_id;
 
 COMMIT;
