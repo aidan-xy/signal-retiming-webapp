@@ -8,6 +8,8 @@ import { resolveDataSource } from './api'
 import { placeIntersections } from './utils/corridorPath'
 import './App.css'
 
+const DEFAULT_TS_SLOT_INDEX = 32 // 08:00
+
 export default function App() {
   const [dataSource, setDataSource] = useState(null)
   const [corridor, setCorridor] = useState(null)
@@ -15,6 +17,16 @@ export default function App() {
   const [selectedId, setSelectedId] = useState(null)
   const [status, setStatus] = useState('loading') // loading | ready | error
   const [page, setPage] = useState('map') // 'map' | 'timespace'
+
+  // ---- timespace state, shared by the map overlay and the table page so
+  // switching between them shows the same day/time/measurement instead of
+  // each view keeping (and losing) its own -------------------------------
+  const [tsDayType, setTsDayType] = useState('weekday')
+  const [tsSlotIndex, setTsSlotIndex] = useState(DEFAULT_TS_SLOT_INDEX)
+  const [tsMeasurementKey, setTsMeasurementKey] = useState('offset_s')
+  const [tsOn, setTsOn] = useState(false) // whether the overlay/highlight is active, shared so toggling it on the map also (de)highlights the table's column, and vice versa
+  const [tsGrid, setTsGrid] = useState(null)
+  const [tsGridStatus, setTsGridStatus] = useState('idle') // idle | loading | ready | error
 
   useEffect(() => {
     let cancelled = false
@@ -40,6 +52,40 @@ export default function App() {
     }
   }, [])
 
+  // Single fetch for both consumers -- re-runs only when the day type
+  // changes, not on every page switch or slider drag.
+  useEffect(() => {
+    if (!dataSource) return
+    let cancelled = false
+    setTsGridStatus('loading')
+    dataSource
+      .getTimespace(tsDayType)
+      .then((data) => {
+        if (cancelled) return
+        setTsGrid(data)
+        setTsGridStatus('ready')
+      })
+      .catch(() => {
+        if (!cancelled) setTsGridStatus('error')
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [dataSource, tsDayType])
+
+  const timespaceShared = {
+    dayType: tsDayType,
+    onDayTypeChange: setTsDayType,
+    slotIndex: tsSlotIndex,
+    onSlotIndexChange: setTsSlotIndex,
+    measurementKey: tsMeasurementKey,
+    onMeasurementKeyChange: setTsMeasurementKey,
+    timespaceOn: tsOn,
+    onTimespaceOnChange: setTsOn,
+    grid: tsGrid,
+    gridStatus: tsGridStatus,
+  }
+
   return (
     <div className="app">
       <Header
@@ -52,7 +98,7 @@ export default function App() {
 
       {page === 'timespace' && status === 'ready' && dataSource && (
         <main className="app__body app__body--timespace">
-          <TimespaceMapView dataSource={dataSource} />
+          <TimespaceMapView {...timespaceShared} />
         </main>
       )}
 
@@ -64,6 +110,7 @@ export default function App() {
                 intersections={intersections}
                 selectedId={selectedId}
                 onSelect={setSelectedId}
+                {...timespaceShared}
               />
             )}
             {status === 'loading' && <div className="app__status">Loading corridor…</div>}

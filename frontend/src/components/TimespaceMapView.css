@@ -3,27 +3,6 @@
   display: flex;
   flex-direction: column;
   background: var(--paper);
-
-  /* Categorical plan palette -- muted, drafted hues rather than saturated
-     "app" colors, consistent with the rest of the plan-sheet aesthetic.
-     Cycles if a row has more distinct plans than swatches (rare: 8 plans
-     in one day at one intersection). */
-  --plan-color-0: #d7e6f2;
-  --plan-color-0-ink: #1f4c6e;
-  --plan-color-1: #e3dcf2;
-  --plan-color-1-ink: #4a3a78;
-  --plan-color-2: #ddeee0;
-  --plan-color-2-ink: #1f7a4d;
-  --plan-color-3: #f7ecd9;
-  --plan-color-3-ink: #a8710f;
-  --plan-color-4: #f6e3e3;
-  --plan-color-4-ink: #a63d3d;
-  --plan-color-5: #dcecec;
-  --plan-color-5-ink: #276b6b;
-  --plan-color-6: #ece3d4;
-  --plan-color-6-ink: #7a5a1f;
-  --plan-color-7: #e6e6ee;
-  --plan-color-7-ink: #3c3c6e;
 }
 
 .timespace-page__controls {
@@ -163,11 +142,21 @@
   font-family: var(--font-mono);
   font-weight: 500;
   border-left: 1px solid rgba(246, 247, 249, 0.14);
+  cursor: pointer;
+}
+
+.timespace-grid__time-head:hover {
+  background: rgba(246, 247, 249, 0.12);
 }
 
 .timespace-grid__time-head.is-hour {
   border-left: 1px solid rgba(246, 247, 249, 0.4);
   font-weight: 700;
+}
+
+.timespace-grid__time-head.is-selected-slot {
+  background: var(--amber);
+  color: var(--ink);
 }
 
 .timespace-grid__row-head {
@@ -206,6 +195,11 @@
   border-bottom: 1px solid var(--line);
   border-left: 1px solid rgba(20, 36, 56, 0.06);
   color: var(--ink);
+  cursor: pointer;
+}
+
+.timespace-grid__cell:hover {
+  filter: brightness(0.94);
 }
 
 .timespace-grid__cell-plan {
@@ -229,22 +223,14 @@
   border-left: 1px solid var(--line-strong);
 }
 
+.timespace-grid__cell.is-selected-slot {
+  box-shadow: inset 0 0 0 2px var(--amber);
+}
+
 .timespace-grid tbody tr:hover .timespace-grid__row-head,
 .timespace-grid tbody tr:hover .timespace-grid__cell {
   filter: brightness(0.96);
 }
-
-/* plan-color assignment -- background carries the "which plan" signal,
-   a matching ink tone keeps the number legible without adding a second,
-   competing hue */
-.plan-color-0 { background: var(--plan-color-0); color: var(--plan-color-0-ink); }
-.plan-color-1 { background: var(--plan-color-1); color: var(--plan-color-1-ink); }
-.plan-color-2 { background: var(--plan-color-2); color: var(--plan-color-2-ink); }
-.plan-color-3 { background: var(--plan-color-3); color: var(--plan-color-3-ink); }
-.plan-color-4 { background: var(--plan-color-4); color: var(--plan-color-4-ink); }
-.plan-color-5 { background: var(--plan-color-5); color: var(--plan-color-5-ink); }
-.plan-color-6 { background: var(--plan-color-6); color: var(--plan-color-6-ink); }
-.plan-color-7 { background: var(--plan-color-7); color: var(--plan-color-7-ink); }
 
 @media (max-width: 720px) {
   .timespace-page__controls {
