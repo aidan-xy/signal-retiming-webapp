@@ -116,6 +116,20 @@ export default function PhasingTimingTable({ channels, splits, plans }) {
                 </td>
               ))}
             </tr>
+            <tr>
+              <td colSpan={3 + channels.length}>Offset</td>
+              {plans.map((plan, i) => (
+                <td
+                  key={plan.plan_number}
+                  className={`timing-table__duration timing-table__cycle ${i === 0 ? 'combo-table__col-divider' : ''} ${
+                    plan.placeholder ? 'timing-table__duration--placeholder' : ''
+                  } ${!plan.placeholder && plan.matchesExisting ? 'timing-table__duration--same' : ''}`}
+                  title={!plan.placeholder && plan.matchesExisting ? 'Same as existing' : undefined}
+                >
+                  {plan.placeholder ? 'IP' : `${plan.offset_s}s`}
+                </td>
+              ))}
+            </tr>
           </tfoot>
         </table>
       </div>
