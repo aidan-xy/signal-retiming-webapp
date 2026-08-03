@@ -1,0 +1,151 @@
+/* ---- the grid itself ---------------------------------------------------- */
+
+.timespace-grid-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.timespace-grid {
+  border-collapse: separate;
+  border-spacing: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.timespace-grid__corner,
+.timespace-grid__time-head {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  border-bottom: 2px solid var(--route);
+  white-space: nowrap;
+}
+
+.timespace-grid__corner {
+  left: 0;
+  z-index: 4;
+  min-width: 200px;
+  text-align: left;
+  padding: 8px 12px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.timespace-grid__time-head {
+  min-width: 40px;
+  padding: 6px 3px;
+  text-align: center;
+  font-size: 9.5px;
+  font-family: var(--font-mono);
+  font-weight: 500;
+  border-left: 1px solid rgba(246, 247, 249, 0.14);
+  cursor: pointer;
+}
+
+.timespace-grid__time-head:hover {
+  background: rgba(246, 247, 249, 0.12);
+}
+
+.timespace-grid__time-head.is-hour {
+  border-left: 1px solid rgba(246, 247, 249, 0.4);
+  font-weight: 700;
+}
+
+.timespace-grid__time-head.is-selected-slot {
+  background: var(--amber);
+  color: var(--ink);
+}
+
+.timespace-grid__row-head {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--surface);
+  border-right: 2px solid var(--route);
+  border-bottom: 1px solid var(--line);
+  padding: 5px 12px;
+  text-align: left;
+  white-space: nowrap;
+  font-weight: 400;
+}
+
+.timespace-grid__row-order {
+  display: inline-block;
+  min-width: 18px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--steel-soft);
+  margin-right: 6px;
+}
+
+.timespace-grid__row-name {
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--ink);
+}
+
+.timespace-grid__cell {
+  min-width: 40px;
+  padding: 3px 4px 5px;
+  text-align: center;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--line);
+  border-left: 1px solid rgba(20, 36, 56, 0.06);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.timespace-grid__cell:hover {
+  filter: brightness(0.94);
+}
+
+.timespace-grid__cell-plan {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 8.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  opacity: 0.62;
+  line-height: 1.3;
+}
+
+.timespace-grid__cell-value {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  line-height: 1.3;
+}
+
+.timespace-grid__cell.is-hour {
+  border-left: 1px solid var(--line-strong);
+}
+
+/* Proposed value that's real but hasn't diverged from Existing yet -- keeps
+   its real heat color; only a ring communicates "not retimed yet", same
+   visual language as the map overlay's marker ring. Uses outline, not
+   border: `.timespace-grid__cell` only sets border-bottom/border-left
+   (top/right are `none`, i.e. zero width), so adding `border-style: dashed`
+   here would flip top/right to the browser's default ~3px "medium" width --
+   inflating every matching row's height and desyncing the two tables in the
+   Compare page, since table row height is driven by its tallest cell.
+   Outline never participates in box sizing or table layout, so it can't. */
+.timespace-grid__cell.is-same-as-existing {
+  outline: 1.5px dashed var(--steel-soft);
+  outline-offset: -1.5px;
+}
+
+.timespace-grid__cell.is-selected-slot {
+  box-shadow: inset 0 0 0 2px var(--amber);
+}
+
+.timespace-grid tbody tr:hover .timespace-grid__row-head,
+.timespace-grid tbody tr:hover .timespace-grid__cell {
+  filter: brightness(0.96);
+}

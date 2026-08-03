@@ -1,0 +1,120 @@
+/* Shared "controls strip" chrome -- day-type toggle, measurement select,
+   hint text, and loading/error status -- used by both the single-scenario
+   Time-Space table (TimespaceMapView) and the Compare page
+   (TimespaceComparisonView), so their toolbars read as the same control. */
+
+.timespace-page__controls {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 20px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+
+.timespace-page__toggle {
+  display: inline-flex;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.timespace-page__toggle-btn {
+  appearance: none;
+  border: none;
+  background: var(--surface);
+  padding: 7px 16px;
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--steel);
+  cursor: pointer;
+}
+
+.timespace-page__toggle-btn:not(:last-child) {
+  border-right: 1px solid var(--line-strong);
+}
+
+.timespace-page__toggle-btn.is-active {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.timespace-page__measurement {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--steel);
+}
+
+.timespace-page__measurement select {
+  font-family: var(--font-body);
+  font-size: 13px;
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: 400;
+  color: var(--ink);
+  padding: 6px 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.timespace-page__hint {
+  margin: 0;
+  flex: 1;
+  min-width: 240px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--steel-soft);
+}
+
+.timespace-page__hint--placeholder {
+  flex-basis: 100%;
+  padding: 8px 10px;
+  background: rgba(168, 113, 15, 0.1);
+  border: 1px dashed var(--amber);
+  border-radius: var(--radius);
+  color: var(--amber);
+}
+
+.timespace-page__hint--same {
+  flex-basis: 100%;
+  padding: 8px 10px;
+  background: var(--paper);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius);
+  color: var(--steel-soft);
+}
+
+.timespace-page__status {
+  padding: 32px 20px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--steel-soft);
+}
+
+.timespace-page__status--error {
+  color: var(--signal-red);
+}
+
+@media (max-width: 720px) {
+  .timespace-page__controls {
+    padding: 12px 14px;
+  }
+  .timespace-page__hint {
+    display: none;
+  }
+}

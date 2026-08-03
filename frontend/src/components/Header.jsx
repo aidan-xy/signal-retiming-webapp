@@ -4,6 +4,7 @@ import './Header.css'
 const PAGES = [
   { key: 'map', label: 'Map & Timings' },
   { key: 'timespace', label: 'Time-Space Map' },
+  { key: 'compare', label: 'Compare' },
 ]
 
 const SCENARIOS = [
@@ -48,7 +49,7 @@ export default function Header({
       )}
 
       <div className="app-header__meta">
-        {onScenarioChange && (
+        {onScenarioChange && page !== 'compare' && (
           <label
             className={`app-header__scenario app-header__scenario--${scenario}`}
             title="Switch between existing (as-built) and proposed signal timing, shown in the Map view and Time-Space Map"
@@ -70,6 +71,11 @@ export default function Header({
               <ChevronDown size={16} strokeWidth={2.5} className="app-header__scenario-chevron" />
             </span>
           </label>
+        )}
+        {page === 'compare' && (
+          <span className="app-header__pill app-header__pill--compare">
+            Existing vs. Proposed
+          </span>
         )}
         {intersectionCount != null && (
           <span className="app-header__count">{intersectionCount} intersections</span>

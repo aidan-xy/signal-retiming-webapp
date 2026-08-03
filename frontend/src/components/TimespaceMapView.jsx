@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef } from 'react'
-import { computeValueRange, valueToHeatBucket } from '../utils/heatScale'
+import { computeValueRange } from '../utils/heatScale'
 import { MEASUREMENTS, getMeasurement } from '../utils/timespaceMeasurements'
 import HeatLegend from './HeatLegend'
+import TimespaceGridTable from './TimespaceGridTable'
+import './TimespacePageControls.css'
 import './TimespaceMapView.css'
 
 const DAY_TYPES = [
@@ -26,19 +28,12 @@ export default function TimespaceMapView({
 }) {
   const scrollRef = useRef(null)
 
-  const sortedIntersections = useMemo(() => {
-    if (!grid) return []
-    return [...grid.intersections].sort((a, b) => a.natural_order - b.natural_order)
-  }, [grid])
-
   const measurement = getMeasurement(measurementKey)
 
   // One value->color scale for the whole grid (every intersection, every
   // slot) for the selected measurement -- shared with the map overlay via
   // the same utility, so a given value reads as the same color everywhere.
   const valueRange = useMemo(() => computeValueRange(grid, measurement), [grid, measurement])
-
-  const timeColumns = sortedIntersections[0]?.slots ?? []
 
   // Bring the column matching the shared slotIndex into view -- relevant
   // when arriving from the map view's slider rather than clicking here.
@@ -54,13 +49,6 @@ export default function TimespaceMapView({
   function selectSlot(slotIdx) {
     onSlotIndexChange(slotIdx)
     onTimespaceOnChange(true)
-  }
-
-  function handleSlotKeyDown(e, slotIdx) {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault()
-      selectSlot(slotIdx)
-    }
   }
 
   return (
@@ -118,7 +106,8 @@ export default function TimespaceMapView({
           heatmap of that value across the whole corridor and day — darker
           means higher, per the scale above. Click a time (column header or
           cell) to select it — the same selection used by the Map view's
-          Time-Space Data overlay.
+          Time-Space Data overlay. Prefer a side-by-side view? See the
+          Compare tab.
         </p>
       </div>
 
@@ -131,79 +120,15 @@ export default function TimespaceMapView({
         </div>
       )}
 
-      {grid && (
-        <div className="timespace-grid-scroll" ref={scrollRef}>
-          <table className="timespace-grid">
-            <thead>
-              <tr>
-                <th className="timespace-grid__corner">
-                  <span>Intersection</span>
-                </th>
-                {timeColumns.map((slot) => (
-                  <th
-                    key={slot.slot_index}
-                    data-slot-index={slot.slot_index}
-                    role="button"
-                    tabIndex={0}
-                    aria-pressed={timespaceOn && slot.slot_index === slotIndex}
-                    onClick={() => selectSlot(slot.slot_index)}
-                    onKeyDown={(e) => handleSlotKeyDown(e, slot.slot_index)}
-                    className={`timespace-grid__time-head ${
-                      slot.slot_index % 4 === 0 ? 'is-hour' : ''
-                    } ${timespaceOn && slot.slot_index === slotIndex ? 'is-selected-slot' : ''}`}
-                  >
-                    <span>{slot.slot_time}</span>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {sortedIntersections.map((inter) => (
-                <tr key={inter.intersection_id}>
-                  <th className="timespace-grid__row-head" scope="row">
-                    <span className="timespace-grid__row-order">{inter.natural_order}</span>
-                    <span className="timespace-grid__row-name">{inter.name}</span>
-                  </th>
-                  {inter.slots.map((slot) => {
-                    const value = measurement.getValue(slot)
-                    const isPlaceholder = Boolean(grid.placeholder)
-                    const isSameAsExisting = !isPlaceholder && Boolean(slot.matchesExisting)
-                    const heatBucket = isPlaceholder ? 'ip' : valueToHeatBucket(value, valueRange)
-                    return (
-                      <td
-                        key={slot.slot_index}
-                        data-slot-index={slot.slot_index}
-                        role="button"
-                        tabIndex={0}
-                        aria-pressed={timespaceOn && slot.slot_index === slotIndex}
-                        onClick={() => selectSlot(slot.slot_index)}
-                        onKeyDown={(e) => handleSlotKeyDown(e, slot.slot_index)}
-                        className={`timespace-grid__cell heat-${heatBucket} ${
-                          slot.slot_index % 4 === 0 ? 'is-hour' : ''
-                        } ${timespaceOn && slot.slot_index === slotIndex ? 'is-selected-slot' : ''} ${
-                          isSameAsExisting ? 'is-same-as-existing' : ''
-                        }`}
-                        title={
-                          isPlaceholder
-                            ? `Plan ${slot.plan_number} · ${slot.slot_time} · no proposed data imported (IP) · click to select`
-                            : isSameAsExisting
-                            ? `Plan ${slot.plan_number} · ${slot.slot_time} · matches existing, not yet retimed · click to select`
-                            : `Plan ${slot.plan_number} · ${slot.slot_time} · click to select`
-                        }
-                      >
-                        <span className="timespace-grid__cell-plan">P{slot.plan_number}</span>
-                        <span className="timespace-grid__cell-value">
-                          {isPlaceholder ? 'IP' : value ?? '—'}
-                        </span>
-                      </td>
-                    )
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      <TimespaceGridTable
+        ref={scrollRef}
+        grid={grid}
+        measurement={measurement}
+        valueRange={valueRange}
+        slotIndex={slotIndex}
+        timespaceOn={timespaceOn}
+        onSelectSlot={selectSlot}
+      />
     </div>
   )
 }

@@ -4,6 +4,7 @@ import Header from './components/Header'
 import MapView from './components/MapView'
 import IntersectionDrawer from './components/IntersectionDrawer'
 import TimespaceMapView from './components/TimespaceMapView'
+import TimespaceComparisonView from './components/TimespaceComparisonView'
 import { resolveDataSource } from './api'
 import { placeIntersections } from './utils/corridorPath'
 import './App.css'
@@ -16,7 +17,7 @@ export default function App() {
   const [intersections, setIntersections] = useState([])
   const [selectedId, setSelectedId] = useState(null)
   const [status, setStatus] = useState('loading') // loading | ready | error
-  const [page, setPage] = useState('map') // 'map' | 'timespace'
+  const [page, setPage] = useState('map') // 'map' | 'timespace' | 'compare'
 
   // ---- timespace state, shared by the map overlay and the table page so
   // switching between them shows the same day/time/measurement instead of
@@ -32,6 +33,15 @@ export default function App() {
   // map view's timespace overlay, and the timespace table -- all three
   // should show the same scenario at once rather than drifting.
   const [scenario, setScenario] = useState('existing')
+
+  // ---- compare-page state: both scenarios' grids at once, independent of
+  // the header's scenario toggle (the Compare page always shows both).
+  // Fetched lazily -- only once the Compare page is actually visited -- and
+  // re-fetched only when the day type changes.
+  const [tsGridExisting, setTsGridExisting] = useState(null)
+  const [tsGridExistingStatus, setTsGridExistingStatus] = useState('idle')
+  const [tsGridProposed, setTsGridProposed] = useState(null)
+  const [tsGridProposedStatus, setTsGridProposedStatus] = useState('idle')
 
   useEffect(() => {
     let cancelled = false
@@ -78,6 +88,43 @@ export default function App() {
     }
   }, [dataSource, tsDayType, scenario])
 
+  // Compare page: fetch both scenarios' grids together, only while that
+  // page is the active one, re-running when the day type changes. Doesn't
+  // reuse tsGrid/tsGridStatus above since those track whichever single
+  // scenario the header toggle currently has selected, not "both".
+  useEffect(() => {
+    if (!dataSource || page !== 'compare') return
+    let cancelled = false
+
+    setTsGridExistingStatus('loading')
+    dataSource
+      .getTimespace(tsDayType, 'existing')
+      .then((data) => {
+        if (cancelled) return
+        setTsGridExisting(data)
+        setTsGridExistingStatus('ready')
+      })
+      .catch(() => {
+        if (!cancelled) setTsGridExistingStatus('error')
+      })
+
+    setTsGridProposedStatus('loading')
+    dataSource
+      .getTimespace(tsDayType, 'proposed')
+      .then((data) => {
+        if (cancelled) return
+        setTsGridProposed(data)
+        setTsGridProposedStatus('ready')
+      })
+      .catch(() => {
+        if (!cancelled) setTsGridProposedStatus('error')
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [dataSource, page, tsDayType])
+
   const timespaceShared = {
     dayType: tsDayType,
     onDayTypeChange: setTsDayType,
@@ -90,6 +137,21 @@ export default function App() {
     grid: tsGrid,
     gridStatus: tsGridStatus,
     scenario,
+  }
+
+  const compareShared = {
+    dayType: tsDayType,
+    onDayTypeChange: setTsDayType,
+    slotIndex: tsSlotIndex,
+    onSlotIndexChange: setTsSlotIndex,
+    measurementKey: tsMeasurementKey,
+    onMeasurementKeyChange: setTsMeasurementKey,
+    timespaceOn: tsOn,
+    onTimespaceOnChange: setTsOn,
+    existingGrid: tsGridExisting,
+    existingGridStatus: tsGridExistingStatus,
+    proposedGrid: tsGridProposed,
+    proposedGridStatus: tsGridProposedStatus,
   }
 
   return (
@@ -107,6 +169,12 @@ export default function App() {
       {page === 'timespace' && status === 'ready' && dataSource && (
         <main className="app__body app__body--timespace">
           <TimespaceMapView {...timespaceShared} />
+        </main>
+      )}
+
+      {page === 'compare' && status === 'ready' && dataSource && (
+        <main className="app__body app__body--timespace">
+          <TimespaceComparisonView {...compareShared} />
         </main>
       )}
 

@@ -27,8 +27,8 @@ const SPECS = [
       {
         label: 'Phase A',
         splits: [
-          { role: 'PHASE A', ind: { 1: 'G', 3: 'WK' }, dur: [40, 45] },
-          { role: 'PED CL', ind: { 1: 'G', 3: 'FLDW' }, dur: [10, 10] },
+          { role: 'PHASE A', ind: { 1: 'G', 3: 'WK' }, dur: [40, 45], durProposed: [44, 49] },
+          { role: 'PED CL', ind: { 1: 'G', 3: 'FLDW' }, dur: [10, 10], durProposed: [11, 11] },
         ],
       },
       {
@@ -38,9 +38,13 @@ const SPECS = [
         ],
       },
     ],
+    // Fully retimed proposal: both plans' cycle, offset, and durations
+    // diverge from Existing (a real decision, not a placeholder) --
+    // exercises the "real, diverged value" state (plain heat color, no
+    // ring/badge) throughout this intersection's row.
     plans: [
-      { cycle: 90, offset: 10, tod: 'MON-FRI 06:00-09:00' },
-      { cycle: 100, offset: 20, tod: 'MON-FRI 09:00-16:00' },
+      { cycle: 90, offset: 10, tod: 'MON-FRI 06:00-09:00', proposedCycle: 95, proposedOffset: 18 },
+      { cycle: 100, offset: 20, tod: 'MON-FRI 09:00-16:00', proposedCycle: 105, proposedOffset: 25 },
     ],
   },
   {
@@ -70,6 +74,9 @@ const SPECS = [
       { cycle: 90, offset: 5, tod: 'MON-FRI 06:00-09:00' },
       { cycle: 90, offset: 5, tod: 'MON-FRI 09:00-16:00' },
     ],
+    // No proposed* overrides anywhere in this spec -- deliberately: this
+    // intersection hasn't been retimed yet, exercising the "real data,
+    // still matches Existing" state (dashed ring + SAME badge) throughout.
   },
   {
     tab_name: 'Nostrand_Ave',
@@ -95,6 +102,10 @@ const SPECS = [
       { cycle: 90, offset: 30, tod: 'MON-FRI 06:00-09:00' },
       { cycle: 94, offset: 34, tod: 'MON-FRI 09:00-16:00' },
     ],
+    // Nothing has been imported for Proposed at this intersection at all --
+    // exercises the "IP" placeholder state in the drawer (Timing Plans /
+    // Phasing & Timing tabs).
+    proposedMissing: true,
   },
   {
     tab_name: 'New_York_Ave',
@@ -107,17 +118,21 @@ const SPECS = [
       {
         label: 'Phase A',
         splits: [
-          { role: 'PHASE A', ind: { 1: 'G', 3: 'WK' }, dur: [44, 48] },
-          { role: 'PED CL', ind: { 1: 'G', 3: 'FLDW' }, dur: [10, 10] },
+          { role: 'PHASE A', ind: { 1: 'G', 3: 'WK' }, dur: [44, 48], durProposed: [50] },
+          { role: 'PED CL', ind: { 1: 'G', 3: 'FLDW' }, dur: [10, 10], durProposed: [12] },
         ],
       },
       {
         label: 'Phase B',
-        splits: [{ role: 'PHASE A', ind: { 2: 'G', 4: 'WK' }, dur: [36, 36] }],
+        splits: [{ role: 'PHASE A', ind: { 2: 'G', 4: 'WK' }, dur: [36, 36], durProposed: [34] }],
       },
     ],
+    // Mixed within one intersection: Plan 1 (AM) has been retimed, Plan 2
+    // hasn't -- exercises both states side by side in the same table.
+    // durProposed arrays above only cover index 0 (Plan 1); Plan 2's
+    // duration falls back to Existing's since durProposed[1] is undefined.
     plans: [
-      { cycle: 90, offset: 42, tod: 'MON-FRI 06:00-09:00' },
+      { cycle: 90, offset: 42, tod: 'MON-FRI 06:00-09:00', proposedCycle: 96, proposedOffset: 50 },
       { cycle: 94, offset: 46, tod: 'MON-FRI 09:00-16:00' },
     ],
   },
@@ -132,9 +147,9 @@ const SPECS = [
       {
         label: 'Phase A',
         splits: [
-          { role: 'LT PROT', ind: { 2: 'G' }, dur: [14, 16] },
+          { role: 'LT PROT', ind: { 2: 'G' }, dur: [14, 16], durProposed: [18, 20] },
           { role: 'PHASE A', ind: { 1: 'G', 4: 'WK' }, dur: [40, 42] },
-          { role: 'PED CL', ind: { 1: 'G', 4: 'FLDW' }, dur: [11, 11] },
+          { role: 'PED CL', ind: { 1: 'G', 4: 'FLDW' }, dur: [11, 11], durProposed: [12, 12] },
         ],
       },
       {
@@ -145,9 +160,11 @@ const SPECS = [
         ],
       },
     ],
+    // Fully retimed proposal focused on protected left-turn time (a common
+    // real-world retiming motivation) -- both plans diverge from Existing.
     plans: [
-      { cycle: 107, offset: 60, tod: 'MON-FRI 06:00-09:00' },
-      { cycle: 111, offset: 63, tod: 'MON-FRI 09:00-16:00' },
+      { cycle: 107, offset: 60, tod: 'MON-FRI 06:00-09:00', proposedCycle: 112, proposedOffset: 65 },
+      { cycle: 111, offset: 63, tod: 'MON-FRI 09:00-16:00', proposedCycle: 116, proposedOffset: 68 },
     ],
   },
   {
@@ -174,6 +191,7 @@ const SPECS = [
       { cycle: 90, offset: 8, tod: 'MON-FRI 06:00-09:00' },
       { cycle: 94, offset: 8, tod: 'MON-FRI 09:00-16:00' },
     ],
+    // Also not retimed yet -- see Bedford Ave above.
   },
 ]
 
@@ -195,6 +213,7 @@ function buildIntersection(spec, id) {
 
   const splits = []
   const planDurations = spec.plans.map(() => ({}))
+  const planDurationsProposed = spec.plans.map(() => ({}))
   let splitNumber = 1
 
   spec.groups.forEach((group, gi) => {
@@ -213,6 +232,10 @@ function buildIntersection(spec, id) {
       })
       s.dur.forEach((d, planIdx) => {
         planDurations[planIdx][splitNumber] = d
+        // durProposed[planIdx] undefined -> this split's proposed duration
+        // just mirrors Existing (the common case: only some splits/plans
+        // have actually been retimed).
+        planDurationsProposed[planIdx][splitNumber] = s.durProposed?.[planIdx] ?? d
       })
       splitNumber += 1
     })
@@ -225,6 +248,21 @@ function buildIntersection(spec, id) {
     tod_description: p.tod,
     durations: planDurations[i],
   }))
+
+  // null (not an empty array) signals "nothing imported for Proposed at
+  // this intersection at all" -- matches the real API's per-intersection
+  // 404 case (see client.js's getIntersectionDetail), as distinct from
+  // "imported but identical to Existing" (matchesExisting, computed later
+  // by comparing plans/plansProposed).
+  const plansProposed = spec.proposedMissing
+    ? null
+    : spec.plans.map((p, i) => ({
+        plan_number: i + 1,
+        cycle_length_s: p.proposedCycle ?? p.cycle,
+        offset_s: p.proposedOffset ?? p.offset,
+        tod_description: p.tod,
+        durations: planDurationsProposed[i],
+      }))
 
   return {
     intersection: {
@@ -240,6 +278,7 @@ function buildIntersection(spec, id) {
     channels,
     splits,
     plans,
+    plansProposed,
   }
 }
 
@@ -309,6 +348,46 @@ function deriveSampleMovements(splits, channels, plan) {
   ]
 }
 
+// Mirrors client.js's matchesExistingPlan/matchesExistingSlot: a proposed
+// plan or slot only counts as "matches existing" when every field that
+// matters is byte-identical, not just close. Duplicated here (rather than
+// imported) because client.js's version is specific to comparing two real
+// API responses -- this operates on the sample data's own already-built
+// objects instead.
+function plansEqual(a, b) {
+  if (!a || !b) return false
+  if (a.cycle_length_s !== b.cycle_length_s) return false
+  if (a.offset_s !== b.offset_s) return false
+  const keys = new Set([...Object.keys(a.durations), ...Object.keys(b.durations)])
+  for (const k of keys) {
+    if ((a.durations[k] ?? null) !== (b.durations[k] ?? null)) return false
+  }
+  return true
+}
+
+function slotsEqual(a, b) {
+  if (a.plan_number !== b.plan_number) return false
+  if (a.cycle_length_s !== b.cycle_length_s) return false
+  if (a.offset_s !== b.offset_s) return false
+  const am = new Map(a.movements.map((m) => [m.movement_class, m]))
+  const bm = new Map(b.movements.map((m) => [m.movement_class, m]))
+  const classes = new Set([...am.keys(), ...bm.keys()])
+  for (const cls of classes) {
+    const x = am.get(cls)
+    const y = bm.get(cls)
+    if (!x || !y) return false
+    if (
+      x.split_s !== y.split_s ||
+      x.wk_s !== y.wk_s ||
+      x.fldw_s !== y.fldw_s ||
+      x.yellow_allred_s !== y.yellow_allred_s
+    ) {
+      return false
+    }
+  }
+  return true
+}
+
 export const mockDataSource = {
   label: 'sample data',
 
@@ -331,15 +410,25 @@ export const mockDataSource = {
     const detail = DETAILS.get(Number(id))
     if (!detail) throw new Error(`no sample data for intersection ${id}`)
     if (scenario === 'existing') return { ...detail, scenario }
-    // Sample data has no distinct Proposed scenario -- every plan mirrors
-    // Existing exactly, the same as a real intersection that hasn't been
-    // retimed yet. Shown as real values marked "same as existing", not as
-    // missing data -- see client.js's matchesExistingPlan.
-    return {
-      ...detail,
-      scenario,
-      plans: detail.plans.map((p) => ({ ...p, matchesExisting: true })),
+
+    if (!detail.plansProposed) {
+      // Nothing imported for Proposed at this intersection at all (see
+      // buildIntersection) -- same fallback shape as client.js's
+      // getIntersectionDetail when the real API returns zero proposed rows.
+      return {
+        ...detail,
+        scenario,
+        placeholder: true,
+        plans: detail.plans.map((p) => ({ ...p, placeholder: true })),
+      }
     }
+
+    const existingByNumber = new Map(detail.plans.map((p) => [p.plan_number, p]))
+    const plans = detail.plansProposed.map((p) => ({
+      ...p,
+      matchesExisting: plansEqual(p, existingByNumber.get(p.plan_number)),
+    }))
+    return { ...detail, scenario, plans }
   },
 
   async getTimespace(dayType, scenario = 'existing') {
@@ -365,20 +454,45 @@ export const mockDataSource = {
         slots,
       }
     })
-    const grid = { corridor: CORRIDOR.name, scenario: 'existing', day_type: dayType, intersections }
-    if (scenario === 'existing') return grid
-    // Sample data has no distinct Proposed scenario -- every slot mirrors
-    // Existing exactly, the same as a real intersection/timespace that
-    // hasn't been retimed yet. Shown as real values marked "same as
-    // existing" per slot, not as missing data -- see client.js's
-    // matchesExistingSlot.
-    return {
-      ...grid,
-      scenario,
-      intersections: grid.intersections.map((inter) => ({
-        ...inter,
-        slots: inter.slots.map((slot) => ({ ...slot, matchesExisting: true })),
-      })),
+    const existingGrid = { corridor: CORRIDOR.name, scenario: 'existing', day_type: dayType, intersections }
+    if (scenario === 'existing') return existingGrid
+
+    // Simulate a corridor where the proposed retiming has only been
+    // entered for weekday plans so far -- picking weekend here exercises
+    // the "nothing resolvable at all" placeholder state (real amber "IP"
+    // cells, not just a same-as-existing ring), the same fallback the real
+    // API hits when a scenario has no tod_slots/plan_movements whatsoever
+    // (see client.js).
+    if (dayType === 'weekend') {
+      return { ...existingGrid, scenario, placeholder: true }
     }
+
+    const proposedIntersections = SPECS.map((spec, i) => {
+      const detail = DETAILS.get(i + 1)
+      const existingInter = existingGrid.intersections[i]
+      // No proposed plans imported for this intersection at all (see
+      // buildIntersection) -- fall back to resolving from Existing's own
+      // plans, which naturally comes out byte-identical to the existing
+      // slot below and so reads as "matches existing", not as missing --
+      // the grid has no per-intersection placeholder concept the way the
+      // drawer does (see the module docstring in timespace.py).
+      const sourcePlans = detail.plansProposed || detail.plans
+      const slots = existingInter.slots.map((existingSlot, slotIndex) => {
+        const plan = resolveSamplePlan(sourcePlans, dayType, slotIndex)
+        const slot = {
+          slot_index: slotIndex,
+          slot_time: existingSlot.slot_time,
+          plan_number: plan.plan_number,
+          cycle_length_s: plan.cycle_length_s,
+          offset_s: plan.offset_s,
+          movements: deriveSampleMovements(detail.splits, detail.channels, plan),
+        }
+        slot.matchesExisting = slotsEqual(slot, existingSlot)
+        return slot
+      })
+      return { ...existingInter, slots }
+    })
+
+    return { ...existingGrid, scenario, intersections: proposedIntersections }
   },
 }

@@ -102,6 +102,17 @@
   white-space: nowrap;
 }
 
+.app-header__pill--compare {
+  background: linear-gradient(
+    90deg,
+    rgba(246, 247, 249, 0.14) 0%,
+    rgba(246, 247, 249, 0.14) 50%,
+    rgba(168, 113, 15, 0.28) 50%,
+    rgba(168, 113, 15, 0.28) 100%
+  );
+  border-color: rgba(246, 247, 249, 0.4);
+}
+
 /* ---- scenario dropdown (existing vs. proposed) ---------------------------
    Replaces the old static "Existing — As-Built" pill: same slot in the
    header, but now an actual control, and deliberately more prominent than
