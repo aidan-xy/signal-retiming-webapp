@@ -102,6 +102,98 @@
   white-space: nowrap;
 }
 
+/* ---- scenario dropdown (existing vs. proposed) ---------------------------
+   Replaces the old static "Existing — As-Built" pill: same slot in the
+   header, but now an actual control, and deliberately more prominent than
+   the rest of the header meta since it changes what the Map view and
+   Time-Space Map are showing. */
+.app-header__scenario {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.app-header__scenario-label {
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--route-soft);
+  white-space: nowrap;
+}
+
+.app-header__scenario-control {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.app-header__scenario-select {
+  appearance: none;
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--paper);
+  background: rgba(246, 247, 249, 0.08);
+  border: 1.5px solid rgba(246, 247, 249, 0.4);
+  border-radius: var(--radius);
+  padding: 8px 32px 8px 14px;
+  min-width: 200px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.app-header__scenario-select:hover {
+  background: rgba(246, 247, 249, 0.14);
+}
+
+.app-header__scenario-select:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
+}
+
+.app-header__scenario-select option {
+  color: var(--ink);
+  background: var(--paper);
+}
+
+.app-header__scenario-chevron {
+  position: absolute;
+  right: 10px;
+  pointer-events: none;
+  color: var(--route-soft);
+}
+
+/* Proposed is a decision-in-progress view, not the as-built record -- an
+   amber accent (same color used for the workbook's own "P" placeholder
+   cells) keeps that visible at a glance, not just in the option text. */
+.app-header__scenario--proposed .app-header__scenario-select {
+  border-color: var(--amber);
+  background: rgba(168, 113, 15, 0.16);
+}
+
+.app-header__scenario--proposed .app-header__scenario-label {
+  color: var(--amber);
+}
+
+.app-header__scenario--proposed .app-header__scenario-chevron {
+  color: var(--amber);
+}
+
+@media (max-width: 720px) {
+  .app-header__scenario-label {
+    display: none;
+  }
+  .app-header__scenario-select {
+    min-width: 0;
+    font-size: 12px;
+    padding: 7px 28px 7px 10px;
+  }
+}
+
 .app-header__count {
   font-family: var(--font-mono);
   font-size: 12px;

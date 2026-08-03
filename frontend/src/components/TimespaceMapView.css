@@ -83,6 +83,24 @@
   color: var(--steel-soft);
 }
 
+.timespace-page__hint--placeholder {
+  flex-basis: 100%;
+  padding: 8px 10px;
+  background: rgba(168, 113, 15, 0.1);
+  border: 1px dashed var(--amber);
+  border-radius: var(--radius);
+  color: var(--amber);
+}
+
+.timespace-page__hint--same {
+  flex-basis: 100%;
+  padding: 8px 10px;
+  background: var(--paper);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius);
+  color: var(--steel-soft);
+}
+
 .timespace-page__status {
   padding: 32px 20px;
   font-family: var(--font-body);
@@ -221,6 +239,14 @@
 
 .timespace-grid__cell.is-hour {
   border-left: 1px solid var(--line-strong);
+}
+
+/* Proposed value that's real but hasn't diverged from Existing yet -- keeps
+   its real heat color; only the border communicates "not retimed yet",
+   same visual language as the map overlay's marker ring. */
+.timespace-grid__cell.is-same-as-existing {
+  box-shadow: inset 0 0 0 1.5px var(--steel-soft);
+  border-style: dashed;
 }
 
 .timespace-grid__cell.is-selected-slot {

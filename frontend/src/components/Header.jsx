@@ -1,3 +1,4 @@
+import { ChevronDown } from 'lucide-react'
 import './Header.css'
 
 const PAGES = [
@@ -5,7 +6,20 @@ const PAGES = [
   { key: 'timespace', label: 'Time-Space Map' },
 ]
 
-export default function Header({ corridor, dataSourceLabel, intersectionCount, page, onPageChange }) {
+const SCENARIOS = [
+  { key: 'existing', label: 'Existing — As-Built' },
+  { key: 'proposed', label: 'Proposed — Retiming' },
+]
+
+export default function Header({
+  corridor,
+  dataSourceLabel,
+  intersectionCount,
+  page,
+  onPageChange,
+  scenario,
+  onScenarioChange,
+}) {
   return (
     <header className="app-header">
       <div className="app-header__title">
@@ -34,7 +48,29 @@ export default function Header({ corridor, dataSourceLabel, intersectionCount, p
       )}
 
       <div className="app-header__meta">
-        <span className="app-header__pill">Existing — As-Built</span>
+        {onScenarioChange && (
+          <label
+            className={`app-header__scenario app-header__scenario--${scenario}`}
+            title="Switch between existing (as-built) and proposed signal timing, shown in the Map view and Time-Space Map"
+          >
+            <span className="app-header__scenario-label">Viewing</span>
+            <span className="app-header__scenario-control">
+              <select
+                className="app-header__scenario-select"
+                value={scenario}
+                onChange={(e) => onScenarioChange(e.target.value)}
+                aria-label="Existing or proposed timing"
+              >
+                {SCENARIOS.map((s) => (
+                  <option key={s.key} value={s.key}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown size={16} strokeWidth={2.5} className="app-header__scenario-chevron" />
+            </span>
+          </label>
+        )}
         {intersectionCount != null && (
           <span className="app-header__count">{intersectionCount} intersections</span>
         )}

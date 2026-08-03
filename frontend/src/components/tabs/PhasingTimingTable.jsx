@@ -38,9 +38,22 @@ export default function PhasingTimingTable({ channels, splits, plans }) {
                   key={plan.plan_number}
                   className={`timing-table__plan-head ${i === 0 ? 'combo-table__col-divider' : ''}`}
                 >
-                  <span className="timing-table__plan-num">Plan {plan.plan_number}</span>
+                  <span className="timing-table__plan-num">
+                    Plan {plan.plan_number}
+                    {plan.placeholder && <span className="timing-table__ip-badge">IP</span>}
+                    {!plan.placeholder && plan.matchesExisting && (
+                      <span
+                        className="timing-table__same-badge"
+                        title="Matches Existing exactly — not yet retimed"
+                      >
+                        SAME
+                      </span>
+                    )}
+                  </span>
                   <span className="timing-table__plan-meta">
-                    C={plan.cycle_length_s}s · O={plan.offset_s}s
+                    {plan.placeholder
+                      ? 'not yet decided'
+                      : `C=${plan.cycle_length_s}s · O=${plan.offset_s}s`}
                   </span>
                   {plan.tod_description && (
                     <span className="timing-table__plan-tod">{plan.tod_description}</span>
@@ -74,9 +87,14 @@ export default function PhasingTimingTable({ channels, splits, plans }) {
                   {plans.map((plan, i) => (
                     <td
                       key={plan.plan_number}
-                      className={`timing-table__duration ${i === 0 ? 'combo-table__col-divider' : ''}`}
+                      className={`timing-table__duration ${i === 0 ? 'combo-table__col-divider' : ''} ${
+                        plan.placeholder ? 'timing-table__duration--placeholder' : ''
+                      } ${!plan.placeholder && plan.matchesExisting ? 'timing-table__duration--same' : ''}`}
+                      title={
+                        !plan.placeholder && plan.matchesExisting ? 'Same as existing' : undefined
+                      }
                     >
-                      {plan.durations[interval.split_number] ?? '—'}
+                      {plan.placeholder ? 'IP' : plan.durations[interval.split_number] ?? '—'}
                     </td>
                   ))}
                 </tr>
@@ -89,9 +107,12 @@ export default function PhasingTimingTable({ channels, splits, plans }) {
               {plans.map((plan, i) => (
                 <td
                   key={plan.plan_number}
-                  className={`timing-table__duration timing-table__cycle ${i === 0 ? 'combo-table__col-divider' : ''}`}
+                  className={`timing-table__duration timing-table__cycle ${i === 0 ? 'combo-table__col-divider' : ''} ${
+                    plan.placeholder ? 'timing-table__duration--placeholder' : ''
+                  } ${!plan.placeholder && plan.matchesExisting ? 'timing-table__duration--same' : ''}`}
+                  title={!plan.placeholder && plan.matchesExisting ? 'Same as existing' : undefined}
                 >
-                  {plan.cycle_length_s}s
+                  {plan.placeholder ? 'IP' : `${plan.cycle_length_s}s`}
                 </td>
               ))}
             </tr>

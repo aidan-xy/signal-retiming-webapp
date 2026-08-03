@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { X, MapPin, Maximize2, Minimize2 } from 'lucide-react'
 import OverviewTab from './tabs/OverviewTab'
 import ChannelsTab from './tabs/ChannelsTab'
@@ -23,20 +23,33 @@ const EXPANDED_SECTIONS = [
   { key: 'phasing-timing', label: 'Phasing & Timing Plans' },
 ]
 
-export default function IntersectionDrawer({ intersectionId, dataSource, onClose }) {
+export default function IntersectionDrawer({ intersectionId, dataSource, scenario, onClose }) {
   const [detail, setDetail] = useState(null)
   const [status, setStatus] = useState('loading') // loading | ready | error
   const [activeTab, setActiveTab] = useState('overview')
   const [isExpanded, setIsExpanded] = useState(false)
+  const prevIntersectionId = useRef(null)
 
   useEffect(() => {
     let cancelled = false
+
+    // Only reset the tab/expand view when this is genuinely a different
+    // intersection -- not on every refetch. Re-fetching because the
+    // scenario toggle changed (or dataSource resolves) shouldn't collapse
+    // an expanded view or knock the user back to the Overview tab; the
+    // selected intersection and how you're looking at it should survive
+    // an expand/collapse, and survive a scenario switch too.
+    const isNewIntersection = prevIntersectionId.current !== intersectionId
+    prevIntersectionId.current = intersectionId
+
     setStatus('loading')
-    setActiveTab('overview')
-    setIsExpanded(false)
+    if (isNewIntersection) {
+      setActiveTab('overview')
+      setIsExpanded(false)
+    }
 
     dataSource
-      .getIntersectionDetail(intersectionId)
+      .getIntersectionDetail(intersectionId, scenario)
       .then((data) => {
         if (cancelled) return
         setDetail(data)
@@ -49,7 +62,7 @@ export default function IntersectionDrawer({ intersectionId, dataSource, onClose
     return () => {
       cancelled = true
     }
-  }, [intersectionId, dataSource])
+  }, [intersectionId, dataSource, scenario])
 
   // Escape collapses the expanded view first, then closes the drawer -- so
   // one key always does the least-destructive thing.
@@ -67,6 +80,16 @@ export default function IntersectionDrawer({ intersectionId, dataSource, onClose
   // workbook -- not meaningful to show in the UI.
   const visibleChannels = useMemo(
     () => (detail ? detail.channels.filter((ch) => ch.movement_class != null) : []),
+    [detail]
+  )
+
+  const anyPlanIsPlaceholder = useMemo(
+    () => Boolean(detail?.plans?.some((p) => p.placeholder)),
+    [detail]
+  )
+
+  const anyPlanMatchesExisting = useMemo(
+    () => Boolean(detail?.plans?.some((p) => p.matchesExisting)),
     [detail]
   )
 
@@ -154,6 +177,25 @@ export default function IntersectionDrawer({ intersectionId, dataSource, onClose
             </button>
           </div>
         </div>
+
+        {status === 'ready' && scenario === 'proposed' && anyPlanIsPlaceholder && (
+          <p className="drawer__scenario-note">
+            No proposed data has been imported for this intersection yet —
+            plans shown as <strong>IP</strong> mirror Existing's shape as a
+            placeholder.
+          </p>
+        )}
+
+        {status === 'ready' &&
+          scenario === 'proposed' &&
+          !anyPlanIsPlaceholder &&
+          anyPlanMatchesExisting && (
+            <p className="drawer__scenario-note drawer__scenario-note--muted">
+              This intersection hasn't been retimed yet — plans marked{' '}
+              <strong>SAME</strong> below are real data that still matches
+              Existing exactly.
+            </p>
+          )}
 
         {status === 'loading' && <div className="drawer__state">Reading timing data…</div>}
 

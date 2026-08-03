@@ -44,6 +44,24 @@
   color: var(--steel-soft);
 }
 
+.drawer__scenario-note {
+  margin: 0;
+  padding: 8px 18px;
+  font-family: var(--font-body);
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--amber);
+  background: rgba(168, 113, 15, 0.1);
+  border-bottom: 1px dashed var(--amber);
+  flex-shrink: 0;
+}
+
+.drawer__scenario-note--muted {
+  color: var(--steel-soft);
+  background: var(--paper);
+  border-bottom: 1px dashed var(--line-strong);
+}
+
 .drawer__header-actions {
   display: flex;
   align-items: center;
@@ -459,6 +477,36 @@
   font-family: var(--font-display);
 }
 
+.timing-table__ip-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 5px;
+  font-family: var(--font-display);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--amber);
+  background: rgba(168, 113, 15, 0.14);
+  border: 1px solid var(--amber);
+  border-radius: var(--radius);
+  vertical-align: middle;
+}
+
+.timing-table__same-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 5px;
+  font-family: var(--font-display);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--steel-soft);
+  background: var(--paper);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  vertical-align: middle;
+}
+
 .timing-table__plan-meta {
   display: block;
   font-family: var(--font-mono);
@@ -484,6 +532,25 @@
   color: var(--ink);
 }
 
+.timing-table__duration--placeholder {
+  text-align: center;
+  color: var(--amber);
+  font-weight: 600;
+  background: repeating-linear-gradient(
+    135deg,
+    transparent,
+    transparent 4px,
+    rgba(168, 113, 15, 0.08) 4px,
+    rgba(168, 113, 15, 0.08) 8px
+  );
+}
+
+.timing-table__duration--same {
+  color: var(--steel-soft);
+  font-style: italic;
+  background: var(--paper);
+}
+
 .timing-table tfoot td {
   border-top: 1px solid var(--line-strong);
   border-bottom: none;
@@ -499,4 +566,12 @@
   font-family: var(--font-mono);
   font-weight: 600;
   color: var(--route);
+}
+
+.timing-table__cycle.timing-table__duration--placeholder {
+  color: var(--amber);
+}
+
+.timing-table__cycle.timing-table__duration--same {
+  color: var(--steel-soft);
 }

@@ -238,6 +238,26 @@
   color: var(--signal-red);
 }
 
+.map-view__timespace-status--placeholder {
+  margin: 0;
+  padding: 8px 10px;
+  background: rgba(168, 113, 15, 0.1);
+  border: 1px dashed var(--amber);
+  border-radius: var(--radius);
+  color: var(--amber);
+  line-height: 1.4;
+}
+
+.map-view__timespace-status--same {
+  margin: 0;
+  padding: 8px 10px;
+  background: var(--paper);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius);
+  color: var(--steel-soft);
+  line-height: 1.4;
+}
+
 .map-view__timespace-slider-row {
   display: flex;
   align-items: center;
@@ -303,6 +323,13 @@
 
 .leaflet-tooltip.timespace-marker-tooltip::before {
   display: none;
+}
+
+/* Proposed value that's real but hasn't diverged from Existing yet -- a
+   dashed ring instead of the placeholder's neutral fill, so it keeps its
+   real heat color and only the border communicates "not retimed yet". */
+.leaflet-tooltip.timespace-marker-tooltip.is-same-as-existing {
+  border: 1.5px dashed var(--steel-soft);
 }
 
 .timespace-marker-tooltip__plan {

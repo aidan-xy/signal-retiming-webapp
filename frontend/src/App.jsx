@@ -28,6 +28,11 @@ export default function App() {
   const [tsGrid, setTsGrid] = useState(null)
   const [tsGridStatus, setTsGridStatus] = useState('idle') // idle | loading | ready | error
 
+  // 'existing' (as-built) or 'proposed'. Shared by the header toggle, the
+  // map view's timespace overlay, and the timespace table -- all three
+  // should show the same scenario at once rather than drifting.
+  const [scenario, setScenario] = useState('existing')
+
   useEffect(() => {
     let cancelled = false
 
@@ -52,14 +57,14 @@ export default function App() {
     }
   }, [])
 
-  // Single fetch for both consumers -- re-runs only when the day type
+  // Single fetch for both consumers -- re-runs when the day type or scenario
   // changes, not on every page switch or slider drag.
   useEffect(() => {
     if (!dataSource) return
     let cancelled = false
     setTsGridStatus('loading')
     dataSource
-      .getTimespace(tsDayType)
+      .getTimespace(tsDayType, scenario)
       .then((data) => {
         if (cancelled) return
         setTsGrid(data)
@@ -71,7 +76,7 @@ export default function App() {
     return () => {
       cancelled = true
     }
-  }, [dataSource, tsDayType])
+  }, [dataSource, tsDayType, scenario])
 
   const timespaceShared = {
     dayType: tsDayType,
@@ -84,6 +89,7 @@ export default function App() {
     onTimespaceOnChange: setTsOn,
     grid: tsGrid,
     gridStatus: tsGridStatus,
+    scenario,
   }
 
   return (
@@ -94,6 +100,8 @@ export default function App() {
         intersectionCount={intersections.length}
         page={page}
         onPageChange={status === 'ready' ? setPage : undefined}
+        scenario={scenario}
+        onScenarioChange={setScenario}
       />
 
       {page === 'timespace' && status === 'ready' && dataSource && (
@@ -126,12 +134,16 @@ export default function App() {
               <IntersectionDrawer
                 intersectionId={selectedId}
                 dataSource={dataSource}
+                scenario={scenario}
                 onClose={() => setSelectedId(null)}
               />
             ) : (
               <div className="app__panel-hint">
                 <MapPinned size={28} strokeWidth={1.5} />
-                <p>Select an intersection marker to view its existing signal timing.</p>
+                <p>
+                  Select an intersection marker to view its{' '}
+                  {scenario === 'proposed' ? 'proposed' : 'existing'} signal timing.
+                </p>
               </div>
             )}
           </div>

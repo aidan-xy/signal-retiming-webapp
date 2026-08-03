@@ -78,6 +78,7 @@ export default function MapView({
   onTimespaceOnChange,
   grid,
   gridStatus,
+  scenario,
 }) {
   const mapRef = useRef(null)
   const [baseLayer, setBaseLayer] = useState('satellite')
@@ -93,6 +94,16 @@ export default function MapView({
   // slot) for the selected measurement -- shared with the table page via
   // the same utility, so a given value reads as the same color everywhere.
   const valueRange = useMemo(() => computeValueRange(grid, measurement), [grid, measurement])
+
+  const currentSlotAnyMatchesExisting = useMemo(
+    () =>
+      Boolean(
+        grid &&
+          !grid.placeholder &&
+          grid.intersections.some((inter) => inter.slots[slotIndex]?.matchesExisting)
+      ),
+    [grid, slotIndex]
+  )
 
   const currentSlotTime = grid?.intersections[0]?.slots[slotIndex]?.slot_time ?? '--:--'
 
@@ -134,7 +145,9 @@ export default function MapView({
         {intersections.map((item) => {
           const slot = slotsByIntersectionId.get(item.id)?.slots[slotIndex]
           const value = slot ? measurement.getValue(slot) : null
-          const heatBucket = valueToHeatBucket(value, valueRange)
+          const isPlaceholder = Boolean(grid?.placeholder)
+          const isSameAsExisting = !isPlaceholder && Boolean(slot?.matchesExisting)
+          const heatBucket = isPlaceholder ? 'ip' : valueToHeatBucket(value, valueRange)
           return (
             <Marker
               key={item.id}
@@ -150,14 +163,19 @@ export default function MapView({
                   // bucket/color) forces a clean remount whenever the color
                   // actually needs to change; without this every tooltip
                   // gets stuck showing whichever color it rendered first.
-                  key={`${item.id}-${dayType}-${measurementKey}-${value}`}
+                  key={`${item.id}-${dayType}-${measurementKey}-${scenario}-${value}-${isSameAsExisting}`}
                   permanent
                   direction="top"
                   offset={[0, -18]}
-                  className={`timespace-marker-tooltip heat-${heatBucket}`}
+                  className={`timespace-marker-tooltip heat-${heatBucket} ${
+                    isSameAsExisting ? 'is-same-as-existing' : ''
+                  }`}
+                  title={isSameAsExisting ? 'Matches existing — not yet retimed' : undefined}
                 >
                   <span className="timespace-marker-tooltip__plan">P{slot.plan_number}</span>
-                  <span className="timespace-marker-tooltip__value">{value ?? '—'}</span>
+                  <span className="timespace-marker-tooltip__value">
+                    {isPlaceholder ? 'IP' : value ?? '—'}
+                  </span>
                 </Tooltip>
               )}
             </Marker>
@@ -223,6 +241,20 @@ export default function MapView({
             </label>
 
             {grid && <HeatLegend range={valueRange} />}
+
+            {grid?.placeholder && (
+              <p className="map-view__timespace-status map-view__timespace-status--placeholder">
+                No proposed data has been imported yet — showing{' '}
+                <strong>IP</strong> (in progress) in place of a value.
+              </p>
+            )}
+
+            {!grid?.placeholder && currentSlotAnyMatchesExisting && (
+              <p className="map-view__timespace-status map-view__timespace-status--same">
+                Markers with a dashed ring haven't been retimed yet — the
+                value shown still matches Existing exactly.
+              </p>
+            )}
 
             {gridStatus === 'loading' && !grid && (
               <div className="map-view__timespace-status">Loading…</div>

@@ -327,13 +327,22 @@ export const mockDataSource = {
     }))
   },
 
-  async getIntersectionDetail(id) {
+  async getIntersectionDetail(id, scenario = 'existing') {
     const detail = DETAILS.get(Number(id))
     if (!detail) throw new Error(`no sample data for intersection ${id}`)
-    return detail
+    if (scenario === 'existing') return { ...detail, scenario }
+    // Sample data has no distinct Proposed scenario -- every plan mirrors
+    // Existing exactly, the same as a real intersection that hasn't been
+    // retimed yet. Shown as real values marked "same as existing", not as
+    // missing data -- see client.js's matchesExistingPlan.
+    return {
+      ...detail,
+      scenario,
+      plans: detail.plans.map((p) => ({ ...p, matchesExisting: true })),
+    }
   },
 
-  async getTimespace(dayType) {
+  async getTimespace(dayType, scenario = 'existing') {
     const intersections = SPECS.map((spec, i) => {
       const detail = DETAILS.get(i + 1)
       const slots = []
@@ -356,6 +365,20 @@ export const mockDataSource = {
         slots,
       }
     })
-    return { corridor: CORRIDOR.name, day_type: dayType, intersections }
+    const grid = { corridor: CORRIDOR.name, scenario: 'existing', day_type: dayType, intersections }
+    if (scenario === 'existing') return grid
+    // Sample data has no distinct Proposed scenario -- every slot mirrors
+    // Existing exactly, the same as a real intersection/timespace that
+    // hasn't been retimed yet. Shown as real values marked "same as
+    // existing" per slot, not as missing data -- see client.js's
+    // matchesExistingSlot.
+    return {
+      ...grid,
+      scenario,
+      intersections: grid.intersections.map((inter) => ({
+        ...inter,
+        slots: inter.slots.map((slot) => ({ ...slot, matchesExisting: true })),
+      })),
+    }
   },
 }

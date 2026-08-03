@@ -60,6 +60,22 @@
 .heat-6 { background: var(--heat-6); color: var(--paper); }
 .heat-7 { background: var(--heat-7); color: var(--paper); }
 
+/* Proposed timing that hasn't been decided yet (see schema.sql /
+   extract.py) -- a neutral, dashed treatment distinct from the heat scale,
+   so "IP" (in progress / not yet entered) never reads as a real, colored
+   measurement value. */
+.heat-ip {
+  background: repeating-linear-gradient(
+    135deg,
+    var(--paper),
+    var(--paper) 4px,
+    var(--line) 4px,
+    var(--line) 8px
+  );
+  color: var(--steel-soft);
+  border: 1px dashed var(--line-strong);
+}
+
 * {
   box-sizing: border-box;
 }

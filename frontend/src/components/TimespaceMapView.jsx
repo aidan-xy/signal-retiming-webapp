@@ -22,6 +22,7 @@ export default function TimespaceMapView({
   onTimespaceOnChange,
   grid,
   gridStatus,
+  scenario,
 }) {
   const scrollRef = useRef(null)
 
@@ -96,6 +97,21 @@ export default function TimespaceMapView({
 
         {grid && <HeatLegend range={valueRange} />}
 
+        {grid?.placeholder && (
+          <p className="timespace-page__hint timespace-page__hint--placeholder">
+            No proposed data has been imported yet — cells show{' '}
+            <strong>IP</strong> (in progress) in place of a value, using the
+            Existing plan schedule as a placeholder.
+          </p>
+        )}
+
+        {!grid?.placeholder && grid?.scenario === 'proposed' && (
+          <p className="timespace-page__hint timespace-page__hint--same">
+            Dashed cells are real proposed data that hasn't been retimed yet
+            — the value shown still matches Existing exactly.
+          </p>
+        )}
+
         <p className="timespace-page__hint">
           Each cell shows the active plan number and{' '}
           {measurement.label.toLowerCase()} (in seconds). Shading is a
@@ -150,7 +166,9 @@ export default function TimespaceMapView({
                   </th>
                   {inter.slots.map((slot) => {
                     const value = measurement.getValue(slot)
-                    const heatBucket = valueToHeatBucket(value, valueRange)
+                    const isPlaceholder = Boolean(grid.placeholder)
+                    const isSameAsExisting = !isPlaceholder && Boolean(slot.matchesExisting)
+                    const heatBucket = isPlaceholder ? 'ip' : valueToHeatBucket(value, valueRange)
                     return (
                       <td
                         key={slot.slot_index}
@@ -162,11 +180,21 @@ export default function TimespaceMapView({
                         onKeyDown={(e) => handleSlotKeyDown(e, slot.slot_index)}
                         className={`timespace-grid__cell heat-${heatBucket} ${
                           slot.slot_index % 4 === 0 ? 'is-hour' : ''
-                        } ${timespaceOn && slot.slot_index === slotIndex ? 'is-selected-slot' : ''}`}
-                        title={`Plan ${slot.plan_number} · ${slot.slot_time} · click to select`}
+                        } ${timespaceOn && slot.slot_index === slotIndex ? 'is-selected-slot' : ''} ${
+                          isSameAsExisting ? 'is-same-as-existing' : ''
+                        }`}
+                        title={
+                          isPlaceholder
+                            ? `Plan ${slot.plan_number} · ${slot.slot_time} · no proposed data imported (IP) · click to select`
+                            : isSameAsExisting
+                            ? `Plan ${slot.plan_number} · ${slot.slot_time} · matches existing, not yet retimed · click to select`
+                            : `Plan ${slot.plan_number} · ${slot.slot_time} · click to select`
+                        }
                       >
                         <span className="timespace-grid__cell-plan">P{slot.plan_number}</span>
-                        <span className="timespace-grid__cell-value">{value ?? '—'}</span>
+                        <span className="timespace-grid__cell-value">
+                          {isPlaceholder ? 'IP' : value ?? '—'}
+                        </span>
                       </td>
                     )
                   })}
