@@ -82,6 +82,7 @@ class PlanSplitOut(ORMModel):
 
 class TimingPlanOut(ORMModel):
     id: int
+    scenario: str   # 'existing' | 'proposed'
     plan_number: int
     cycle_length_s: int
     offset_s: int
@@ -99,6 +100,7 @@ class PlanTimingRow(BaseModel):
     tab_name: str
     intersection: str
     natural_order: int
+    scenario: str   # 'existing' | 'proposed'
     plan_number: int
     cycle_length_s: int
     offset_s: int
@@ -138,5 +140,6 @@ class TimespaceIntersectionOut(BaseModel):
 
 class TimespaceGridOut(BaseModel):
     corridor: str
+    scenario: str   # 'existing' | 'proposed'
     day_type: str
     intersections: list[TimespaceIntersectionOut]

@@ -20,6 +20,12 @@ plus, per Major/Minor movement, how much of that cycle is vehicle green
 ("split"), pedestrian WALK, flashing DON'T WALK, and yellow+all-red
 clearance -- everything the map needs to draw progression bands, not just
 mark which plan is active.
+
+`scenario` defaults to 'existing'. 'proposed' is accepted too, for when a
+retiming is decided and re-imported, but currently 404s everywhere: the
+workbook has no numerically-resolvable Proposed TOD/movement data yet (see
+extract.py's module docstring), so tod_slots/plan_movements are only ever
+populated for scenario='existing' as of this import.
 """
 
 from __future__ import annotations
@@ -50,6 +56,15 @@ def _time_to_slot_index(value: datetime.time) -> int:
 def get_timespace(
     corridor_id: int,
     day_type: str = Query(..., pattern="^(weekday|weekend)$"),
+    scenario: str = Query(
+        "existing", pattern="^(existing|proposed)$",
+        description=(
+            "'existing' (as-built) or 'proposed'. Proposed TOD/movement data "
+            "isn't populated in the workbook yet, so this scenario currently "
+            "404s -- see extract.py -- until a retiming is entered and "
+            "re-imported."
+        ),
+    ),
     slot_index: Optional[int] = Query(
         None, ge=0, le=SLOTS_PER_DAY - 1, description="0 = 00:00 ... 95 = 23:45"
     ),
@@ -66,8 +81,12 @@ def get_timespace(
     if slot_index is None and time is not None:
         slot_index = _time_to_slot_index(time)
 
-    sql = _BASE_QUERY + " WHERE corridor = :corridor AND day_type = :day_type"
-    params: dict[str, object] = {"corridor": corridor.name, "day_type": day_type}
+    sql = _BASE_QUERY + " WHERE corridor = :corridor AND scenario = :scenario AND day_type = :day_type"
+    params: dict[str, object] = {
+        "corridor": corridor.name,
+        "scenario": scenario,
+        "day_type": day_type,
+    }
     if slot_index is not None:
         sql += " AND slot_index = :slot_index"
         params["slot_index"] = slot_index
@@ -118,11 +137,16 @@ def get_timespace(
     if not by_intersection:
         raise HTTPException(
             status_code=404,
-            detail="no timespace data for this corridor/day_type -- has import_workbook.py been run?",
+            detail=(
+                "no timespace data for this corridor/scenario/day_type -- "
+                "has import_workbook.py been run, and (for scenario=proposed) "
+                "has a retiming actually been entered in the workbook yet?"
+            ),
         )
 
     return schemas.TimespaceGridOut(
         corridor=corridor.name,
+        scenario=scenario,
         day_type=day_type,
         intersections=[by_intersection[k] for k in order],
     )

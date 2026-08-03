@@ -2,8 +2,8 @@
 ORM mapping onto the tables defined in schema.sql.
 
 This mirrors the DDL exactly -- it does not create or alter anything
-(no create_all() is ever called; see database.py). The three Postgres enum
-types (channel_kind, street_class, day_type) are declared with
+(no create_all() is ever called; see database.py). The four Postgres enum
+types (channel_kind, street_class, day_type, scenario) are declared with
 create_type=False since schema.sql already owns them.
 """
 
@@ -27,6 +27,7 @@ from .database import Base
 ChannelKind = PgEnum("vehicle", "pedestrian", name="channel_kind", create_type=False)
 StreetClass = PgEnum("Major", "Minor", name="street_class", create_type=False)
 DayType = PgEnum("weekday", "weekend", name="day_type", create_type=False)
+Scenario = PgEnum("existing", "proposed", name="scenario", create_type=False)
 
 
 class Corridor(Base):
@@ -146,7 +147,7 @@ class SplitIndication(Base):
 class TimingPlan(Base):
     __tablename__ = "timing_plans"
     __table_args__ = (
-        UniqueConstraint("intersection_id", "plan_number"),
+        UniqueConstraint("intersection_id", "scenario", "plan_number"),
         CheckConstraint("offset_s < cycle_length_s"),
     )
 
@@ -154,6 +155,7 @@ class TimingPlan(Base):
     intersection_id: Mapped[int] = mapped_column(
         ForeignKey("intersections.id", ondelete="CASCADE")
     )
+    scenario: Mapped[str] = mapped_column(Scenario, default="existing")
     plan_number: Mapped[int]
     cycle_length_s: Mapped[int]
     offset_s: Mapped[int]
@@ -182,19 +184,23 @@ class PlanSplit(Base):
 class TodSlot(Base):
     """
     Which plan is active at an intersection for a given 15-minute slot of the
-    day (slot_index 0 = 00:00 ... 95 = 23:45), split by weekday/weekend.
+    day (slot_index 0 = 00:00 ... 95 = 23:45), split by weekday/weekend and by
+    scenario.
 
-    Linked to TimingPlan via the composite (intersection_id, plan_number) FK
-    rather than timing_plan_id directly, so a slot can never reference another
-    intersection's plan by mistake -- see schema.sql.
+    Linked to TimingPlan via the composite (intersection_id, scenario,
+    plan_number) FK rather than timing_plan_id directly, so a slot can never
+    reference another intersection's (or another scenario's) plan by mistake
+    -- see schema.sql. In practice only scenario='existing' rows exist today;
+    see extract.py for why 'proposed' has nothing resolvable yet.
     """
 
     __tablename__ = "tod_slots"
     __table_args__ = (
-        UniqueConstraint("intersection_id", "day_type", "slot_index"),
+        UniqueConstraint("intersection_id", "scenario", "day_type", "slot_index"),
         ForeignKeyConstraint(
-            ["intersection_id", "plan_number"],
-            ["timing_plans.intersection_id", "timing_plans.plan_number"],
+            ["intersection_id", "scenario", "plan_number"],
+            ["timing_plans.intersection_id", "timing_plans.scenario",
+             "timing_plans.plan_number"],
             ondelete="CASCADE",
         ),
     )
@@ -203,6 +209,7 @@ class TodSlot(Base):
     intersection_id: Mapped[int] = mapped_column(
         ForeignKey("intersections.id", ondelete="CASCADE")
     )
+    scenario: Mapped[str] = mapped_column(Scenario, default="existing")
     day_type: Mapped[str] = mapped_column(DayType)
     slot_index: Mapped[int]
     plan_number: Mapped[int]

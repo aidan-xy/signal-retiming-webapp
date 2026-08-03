@@ -70,9 +70,11 @@ def _clear_children(cur, intersection_id: int) -> None:
     # phase_groups cascades to splits, which cascades to indications and
     # plan_splits; channels, timing_plans, and tod_slots are cleared directly.
     # tod_slots must go before timing_plans -- it has a composite FK onto
-    # timing_plans(intersection_id, plan_number) with ON DELETE CASCADE, but
-    # clearing it explicitly here (rather than relying on that cascade) keeps
-    # this function the single place that answers "what gets wiped".
+    # timing_plans(intersection_id, scenario, plan_number) with ON DELETE
+    # CASCADE, but clearing it explicitly here (rather than relying on that
+    # cascade) keeps this function the single place that answers "what gets
+    # wiped". Both scenarios ('existing' and 'proposed') are wiped and
+    # rebuilt together -- there's no partial-scenario re-import.
     cur.execute("DELETE FROM tod_slots    WHERE intersection_id = %s", (intersection_id,))
     cur.execute("DELETE FROM phase_groups WHERE intersection_id = %s", (intersection_id,))
     cur.execute("DELETE FROM channels     WHERE intersection_id = %s", (intersection_id,))
@@ -131,9 +133,10 @@ def load_intersection(cur, corridor_id: int, inter: Intersection,
     for plan in inter.timing_plans:
         cur.execute(
             """INSERT INTO timing_plans
-                   (intersection_id, plan_number, cycle_length_s, offset_s, tod_description)
-               VALUES (%s, %s, %s, %s, %s) RETURNING id""",
-            (iid, plan.plan_number, plan.cycle_length_s, plan.offset_s,
+                   (intersection_id, scenario, plan_number, cycle_length_s, offset_s,
+                    tod_description)
+               VALUES (%s, %s, %s, %s, %s, %s) RETURNING id""",
+            (iid, plan.scenario, plan.plan_number, plan.cycle_length_s, plan.offset_s,
              plan.tod_description),
         )
         pid = cur.fetchone()[0]
@@ -158,16 +161,20 @@ def load_intersection(cur, corridor_id: int, inter: Intersection,
             )
 
     # time-of-day slots: which plan is active per 15-min slot, per day type.
-    # Keyed by (intersection_id, plan_number) -- matching tod_slots' composite
-    # FK onto timing_plans -- rather than the timing_plan id, so this insert
-    # doesn't need to track pid per plan_number separately.
+    # Keyed by (intersection_id, scenario, plan_number) -- matching tod_slots'
+    # composite FK onto timing_plans -- rather than the timing_plan id, so this
+    # insert doesn't need to track pid per plan_number separately. Only ever
+    # populated for scenario='existing' -- see extract.py's module docstring
+    # for why the Proposed block has nothing resolvable to read here yet.
     if inter.tod_slots:
         slot_rows = [
-            (iid, s.day_type, s.slot_index, s.plan_number) for s in inter.tod_slots
+            (iid, "existing", s.day_type, s.slot_index, s.plan_number)
+            for s in inter.tod_slots
         ]
         psycopg2.extras.execute_values(
             cur,
-            """INSERT INTO tod_slots (intersection_id, day_type, slot_index, plan_number)
+            """INSERT INTO tod_slots
+                   (intersection_id, scenario, day_type, slot_index, plan_number)
                VALUES %s""",
             slot_rows,
         )

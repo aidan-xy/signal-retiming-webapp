@@ -18,7 +18,22 @@ discovered per sheet from these anchors:
     row 14     'WeekdayExistingPlan' / 'WeekendExistingPlan' headers -> start of the
                96-row (15-min slot) plan-resolution columns below them
 
-Only the Existing block is read. Proposed timings are out of scope.
+Both the Existing and Proposed blocks are read, into TimingPlan.scenario
+'existing' / 'proposed' respectively. As of this workbook, every tab's
+Proposed block is a placeholder: its plan-number cells are literal values but
+only 2 of them are filled in (vs. up to 6 for Existing), and every other cell
+in the block (tod, cycle length, offset, split durations) is a formula copy
+of the Existing block at the same row (`=V18`, `=W7`, ...) rather than a
+distinct number. It is read and loaded anyway, as-is -- see the module
+docstring in load.py / schema.sql for why -- so callers should not treat
+`scenario = 'proposed'` rows as a real retiming decision until they actually
+diverge from `scenario = 'existing'`.
+
+The Proposed block has no analog of the movement-summary block (below) or a
+numerically-resolvable TOD slot table -- the workbook's own
+Weekday/WeekendProposedPlan columns resolve to a literal "P" string, not a
+plan number -- so plan_movements and tod_slots are only ever populated for
+scenario = 'existing'.
 
 The row-14 headers are a second, independent anchor from the row 7
 tod_description text: they mark the workbook's own precomputed day/time ->
@@ -59,6 +74,8 @@ from dataclasses import dataclass, field
 from openpyxl.utils import get_column_letter
 
 # Workbook layout constants that ARE stable across every tab.
+BLOCK_HEADER_EXISTING = "Existing"
+BLOCK_HEADER_PROPOSED = "Proposed"
 ROW_BLOCK_HEADER = 2      # 'Existing' / 'Proposed'
 ROW_VEH_ASSIGN = 4
 ROW_PED_ASSIGN = 5
@@ -162,6 +179,7 @@ class TimingPlan:
     cycle_length_s: int
     offset_s: int
     tod_description: str | None
+    scenario: str = "existing"     # 'existing' | 'proposed'
     durations: dict[int, int] = field(default_factory=dict)  # split_number -> seconds
     movements: list[MovementSummary] = field(default_factory=list)  # Major + Minor summary
 
@@ -223,12 +241,22 @@ def _text(ws, row, col):
 # layout discovery
 # --------------------------------------------------------------------------
 
+def _find_block(ws, header_text: str) -> int:
+    """Column index where a timing block starts (row 2 == header_text)."""
+    for col in range(1, MAX_SCAN_COL):
+        if _text(ws, ROW_BLOCK_HEADER, col) == header_text:
+            return col
+    raise LayoutError(f"no {header_text!r} marker found in row 2")
+
+
 def _find_existing_block(ws) -> int:
     """Column index where the Existing timing block starts (row 2 == 'Existing')."""
-    for col in range(1, MAX_SCAN_COL):
-        if _text(ws, ROW_BLOCK_HEADER, col) == "Existing":
-            return col
-    raise LayoutError("no 'Existing' marker found in row 2")
+    return _find_block(ws, BLOCK_HEADER_EXISTING)
+
+
+def _find_proposed_block(ws) -> int:
+    """Column index where the Proposed timing block starts (row 2 == 'Proposed')."""
+    return _find_block(ws, BLOCK_HEADER_PROPOSED)
 
 
 def _find_channels(ws) -> list[Channel]:
@@ -329,12 +357,22 @@ def _read_splits(ws, groups: list[PhaseGroup], channels: list[Channel]) -> list[
     return splits
 
 
-def _read_plans(ws, existing_col: int, off_label_row: int,
-                splits: list[Split]) -> list[TimingPlan]:
+def _read_plans(ws, block_col: int, off_label_row: int,
+                splits: list[Split], scenario: str = "existing") -> list[TimingPlan]:
+    """
+    Read one timing block's (Existing or Proposed) plan columns, starting at
+    block_col, into TimingPlan objects tagged with the given scenario.
+
+    Stops at the first column whose plan-number cell doesn't continue the
+    1, 2, 3, ... sequence -- for the Proposed block on this workbook that is
+    always after 2 columns, since only that many plan-number slots are
+    filled in there (see module docstring); the rest of that block's
+    columns hold live formulas but no plan-number label to anchor them to.
+    """
     off_row = off_label_row + 1
 
     plans: list[TimingPlan] = []
-    col = existing_col
+    col = block_col
     expected = 1
     while col < MAX_SCAN_COL:
         n = _int(ws, ROW_PLAN_NUMBER, col)
@@ -349,6 +387,7 @@ def _read_plans(ws, existing_col: int, off_label_row: int,
             cycle_length_s=cycle,
             offset_s=offset or 0,
             tod_description=_text(ws, ROW_TOD, col),
+            scenario=scenario,
         )
         for sp in splits:
             base = ROW_FIRST_SPLIT + GROUP_STRIDE * (sp.group_index - 1)
@@ -359,7 +398,7 @@ def _read_plans(ws, existing_col: int, off_label_row: int,
         col += 1
         expected += 1
     if not plans:
-        raise LayoutError("no timing plans found")
+        raise LayoutError(f"no {scenario} timing plans found")
     return plans
 
 
@@ -475,14 +514,27 @@ def _validate(inter: Intersection) -> None:
         total = sum(plan.durations.values())
         if total != plan.cycle_length_s:
             inter.warnings.append(
-                f"plan {plan.plan_number}: splits sum to {total}s but cycle "
-                f"length is {plan.cycle_length_s}s"
+                f"{plan.scenario} plan {plan.plan_number}: splits sum to {total}s "
+                f"but cycle length is {plan.cycle_length_s}s"
             )
         if plan.offset_s >= plan.cycle_length_s:
             inter.warnings.append(
-                f"plan {plan.plan_number}: offset {plan.offset_s}s >= cycle "
-                f"length {plan.cycle_length_s}s"
+                f"{plan.scenario} plan {plan.plan_number}: offset {plan.offset_s}s "
+                f">= cycle length {plan.cycle_length_s}s"
             )
+    existing_plans = {p.plan_number: p for p in inter.timing_plans if p.scenario == "existing"}
+    proposed_plans = [p for p in inter.timing_plans if p.scenario == "proposed"]
+    if proposed_plans and all(
+        p.cycle_length_s == existing_plans[p.plan_number].cycle_length_s
+        and p.offset_s == existing_plans[p.plan_number].offset_s
+        and p.durations == existing_plans[p.plan_number].durations
+        for p in proposed_plans
+        if p.plan_number in existing_plans
+    ):
+        inter.warnings.append(
+            "proposed timing plans are identical to existing -- no retiming "
+            "has been entered in the workbook yet"
+        )
     nums = [s.split_number for s in inter.splits]
     if nums != sorted(nums) or len(set(nums)) != len(nums):
         inter.warnings.append("split numbers are not strictly increasing/unique")
@@ -499,11 +551,28 @@ def extract_intersection(ws, tab_name: str, display_name: str,
     off_label_row = _find_offset_label_row(ws, existing_col)
     groups = _find_phase_groups(ws, off_label_row)
     splits = _read_splits(ws, groups, channels)
-    plans = _read_plans(ws, existing_col, off_label_row, splits)
+
+    plans = _read_plans(ws, existing_col, off_label_row, splits, scenario="existing")
     tod_slots = _read_tod_slots(ws, known_plan_numbers={p.plan_number for p in plans})
     movements_by_plan = _read_plan_movements(ws, [p.plan_number for p in plans])
     for plan in plans:
         plan.movements = movements_by_plan[plan.plan_number]
+
+    # Proposed block: same splits/phase groups (the phasing diagram is shared
+    # between blocks -- see module docstring), its own plan/cycle/offset/
+    # duration cells. No movement-summary block or resolvable TOD table exists
+    # for it yet (see module docstring), so plan_movements/tod_slots are left
+    # empty for these plans. Read as a soft-fail: a tab missing a Proposed
+    # block entirely is a layout surprise worth surfacing as a warning rather
+    # than aborting the whole (otherwise-good) Existing import for that tab.
+    warnings: list[str] = []
+    try:
+        proposed_col = _find_proposed_block(ws)
+        proposed_plans = _read_plans(ws, proposed_col, off_label_row, splits,
+                                     scenario="proposed")
+        plans.extend(proposed_plans)
+    except LayoutError as exc:
+        warnings.append(f"proposed timing block not read: {exc}")
 
     # Crosswalk widths live just below the timing block, labelled in column B.
     major = minor = None
@@ -525,6 +594,7 @@ def extract_intersection(ws, tab_name: str, display_name: str,
         splits=splits,
         timing_plans=plans,
         tod_slots=tod_slots,
+        warnings=warnings,
     )
     _validate(inter)
     return inter

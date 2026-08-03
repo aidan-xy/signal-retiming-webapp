@@ -26,6 +26,10 @@ _BASE_QUERY = "SELECT * FROM v_plan_timing"
 def query_plan_timing(
     corridor: Optional[str] = Query(None, description="exact corridor name"),
     tab_name: Optional[str] = Query(None, description="exact intersection tab_name"),
+    scenario: Optional[str] = Query(
+        None, pattern="^(existing|proposed)$",
+        description="filter to one scenario; omit for both",
+    ),
     plan_number: Optional[int] = Query(None),
     limit: int = Query(500, ge=1, le=5000),
     offset: int = Query(0, ge=0),
@@ -40,6 +44,9 @@ def query_plan_timing(
     if tab_name is not None:
         clauses.append("tab_name = :tab_name")
         params["tab_name"] = tab_name
+    if scenario is not None:
+        clauses.append("scenario = :scenario")
+        params["scenario"] = scenario
     if plan_number is not None:
         clauses.append("plan_number = :plan_number")
         params["plan_number"] = plan_number
@@ -47,7 +54,7 @@ def query_plan_timing(
     sql = _BASE_QUERY
     if clauses:
         sql += " WHERE " + " AND ".join(clauses)
-    sql += " ORDER BY natural_order, plan_number, split_number LIMIT :limit OFFSET :offset"
+    sql += " ORDER BY natural_order, scenario, plan_number, split_number LIMIT :limit OFFSET :offset"
 
     rows = db.execute(text(sql), params).mappings().all()
     return list(rows)

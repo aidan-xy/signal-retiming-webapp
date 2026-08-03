@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
@@ -36,6 +36,7 @@ def _split_out(split: models.Split) -> schemas.SplitOut:
 def _plan_out(plan: models.TimingPlan) -> schemas.TimingPlanDetail:
     return schemas.TimingPlanDetail(
         id=plan.id,
+        scenario=plan.scenario,
         plan_number=plan.plan_number,
         cycle_length_s=plan.cycle_length_s,
         offset_s=plan.offset_s,
@@ -97,13 +98,21 @@ def list_splits(intersection_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/{intersection_id}/timing-plans", response_model=list[schemas.TimingPlanOut])
-def list_timing_plans(intersection_id: int, db: Session = Depends(get_db)):
+def list_timing_plans(
+    intersection_id: int,
+    scenario: str | None = Query(
+        None, pattern="^(existing|proposed)$",
+        description="filter to one scenario; omit for both",
+    ),
+    db: Session = Depends(get_db),
+):
     _get_intersection_or_404(db, intersection_id)
-    stmt = (
-        select(models.TimingPlan)
-        .where(models.TimingPlan.intersection_id == intersection_id)
-        .order_by(models.TimingPlan.plan_number)
+    stmt = select(models.TimingPlan).where(
+        models.TimingPlan.intersection_id == intersection_id
     )
+    if scenario is not None:
+        stmt = stmt.where(models.TimingPlan.scenario == scenario)
+    stmt = stmt.order_by(models.TimingPlan.scenario, models.TimingPlan.plan_number)
     return db.scalars(stmt).all()
 
 
@@ -111,12 +120,21 @@ def list_timing_plans(intersection_id: int, db: Session = Depends(get_db)):
     "/{intersection_id}/timing-plans/{plan_number}",
     response_model=schemas.TimingPlanDetail,
 )
-def get_timing_plan(intersection_id: int, plan_number: int, db: Session = Depends(get_db)):
+def get_timing_plan(
+    intersection_id: int,
+    plan_number: int,
+    scenario: str = Query(
+        "existing", pattern="^(existing|proposed)$",
+        description="plan_number is only unique within a scenario",
+    ),
+    db: Session = Depends(get_db),
+):
     _get_intersection_or_404(db, intersection_id)
     stmt = (
         select(models.TimingPlan)
         .where(
             models.TimingPlan.intersection_id == intersection_id,
+            models.TimingPlan.scenario == scenario,
             models.TimingPlan.plan_number == plan_number,
         )
         .options(

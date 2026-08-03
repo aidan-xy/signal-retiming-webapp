@@ -1,9 +1,24 @@
 -- =============================================================================
--- Signal timing database -- initial scope: existing ("as-built") timings only.
+-- Signal timing database -- existing ("as-built") and proposed timings.
 --
 -- Source of truth: the per-intersection tabs of the NYCDOT corridor comparison
--- workbook. Proposed timings and the raw IQL controller report are
--- intentionally OUT OF SCOPE for this schema.
+-- workbook. The raw IQL controller report remains OUT OF SCOPE for this schema.
+--
+-- Proposed timings: every tab's "Proposed" block is currently a placeholder --
+-- its plan numbers, cycle/offset/split-duration cells are formula copies of
+-- the "Existing" block (e.g. `=V18`), and only 2 of the block's plan-number
+-- slots are even filled in (vs. up to 6 for Existing). No retiming decision
+-- has been made yet. It is imported anyway, as-is, so the schema/API are
+-- ready the moment real proposed numbers replace those formulas -- consumers
+-- should not assume `scenario = 'proposed'` rows reflect a real decision
+-- until they diverge from `scenario = 'existing'`.
+--
+-- The workbook also has no precomputed Major/Minor movement-summary block
+-- for Proposed (the 'MajorG' anchor block extract.py reads for
+-- plan_movements exists only once per tab, for Existing) and its
+-- Weekday/WeekendProposedPlan TOD columns resolve to a literal "P" string
+-- placeholder rather than a plan number. Both are therefore left unpopulated
+-- for scenario = 'proposed' until the workbook itself has real data to read.
 --
 -- Target: PostgreSQL 13+
 -- =============================================================================
@@ -97,7 +112,15 @@ CREATE TABLE split_indications (
 );
 
 -- -----------------------------------------------------------------------------
--- Timing plans: one per time-of-day pattern at an intersection.
+-- Scenario: 'existing' (as-built) vs 'proposed' (the workbook's Proposed
+-- block). Plan numbers are only unique within a scenario -- Existing plan 1
+-- and Proposed plan 1 are different rows -- so scenario is part of the key
+-- everywhere plan_number is.
+-- -----------------------------------------------------------------------------
+CREATE TYPE scenario AS ENUM ('existing', 'proposed');
+
+-- -----------------------------------------------------------------------------
+-- Timing plans: one per time-of-day pattern at an intersection, per scenario.
 -- tod_description is kept as the raw workbook string ('MON-FRI 05:00-10:15');
 -- it is provenance/display text only -- tod_slots (below) is the queryable
 -- day/time -> plan resolution, since several tod_description cells pack
@@ -106,11 +129,12 @@ CREATE TABLE split_indications (
 CREATE TABLE timing_plans (
     id                serial PRIMARY KEY,
     intersection_id   integer NOT NULL REFERENCES intersections(id) ON DELETE CASCADE,
+    scenario          scenario NOT NULL DEFAULT 'existing',
     plan_number       integer NOT NULL CHECK (plan_number > 0),
     cycle_length_s    integer NOT NULL CHECK (cycle_length_s > 0),
     offset_s          integer NOT NULL CHECK (offset_s >= 0),
     tod_description   text,
-    UNIQUE (intersection_id, plan_number),
+    UNIQUE (intersection_id, scenario, plan_number),
     CHECK (offset_s < cycle_length_s)
 );
 
@@ -164,24 +188,33 @@ CREATE INDEX ix_timing_plans_intersection ON timing_plans (intersection_id);
 -- re-parsed out of tod_description, which is free text and not reliably
 -- machine-parseable (see comment on timing_plans above).
 --
--- The composite FK against timing_plans' own (intersection_id, plan_number)
--- unique constraint guarantees a slot can never point at another
--- intersection's plan.
+-- scenario is carried here too (not just plan_number) since Existing plan 1
+-- and Proposed plan 1 are different timing_plans rows. In practice only
+-- scenario = 'existing' rows are populated for now: the workbook's
+-- Weekday/WeekendProposedPlan columns resolve to a literal "P" placeholder
+-- string rather than a real plan number (see extract.py), so there is
+-- nothing machine-parseable to load for scenario = 'proposed' yet. The
+-- column stays scenario-aware so no migration is needed once that changes.
+--
+-- The composite FK against timing_plans' own (intersection_id, scenario,
+-- plan_number) unique constraint guarantees a slot can never point at
+-- another intersection's (or another scenario's) plan.
 -- -----------------------------------------------------------------------------
 CREATE TYPE day_type AS ENUM ('weekday', 'weekend');
 
 CREATE TABLE tod_slots (
     id                serial PRIMARY KEY,
     intersection_id   integer NOT NULL REFERENCES intersections(id) ON DELETE CASCADE,
+    scenario          scenario NOT NULL DEFAULT 'existing',
     day_type          day_type NOT NULL,
     slot_index         smallint NOT NULL CHECK (slot_index BETWEEN 0 AND 95),
     plan_number        integer NOT NULL,
-    UNIQUE (intersection_id, day_type, slot_index),
-    FOREIGN KEY (intersection_id, plan_number)
-        REFERENCES timing_plans (intersection_id, plan_number) ON DELETE CASCADE
+    UNIQUE (intersection_id, scenario, day_type, slot_index),
+    FOREIGN KEY (intersection_id, scenario, plan_number)
+        REFERENCES timing_plans (intersection_id, scenario, plan_number) ON DELETE CASCADE
 );
 
-CREATE INDEX ix_tod_slots_intersection ON tod_slots (intersection_id, day_type, slot_index);
+CREATE INDEX ix_tod_slots_intersection ON tod_slots (intersection_id, scenario, day_type, slot_index);
 
 -- -----------------------------------------------------------------------------
 -- Convenience view: split durations with everything a UI needs to draw a ring
@@ -192,6 +225,7 @@ SELECT c.name              AS corridor,
        i.tab_name,
        i.name              AS intersection,
        i.natural_order,
+       tp.scenario,
        tp.plan_number,
        tp.cycle_length_s,
        tp.offset_s,
@@ -219,6 +253,7 @@ SELECT i.id                                            AS intersection_id,
        i.tab_name,
        i.name                                          AS intersection,
        i.natural_order,
+       ts.scenario,
        ts.day_type,
        ts.slot_index,
        (ts.slot_index * interval '15 minutes')::time   AS slot_time,
@@ -228,6 +263,7 @@ SELECT i.id                                            AS intersection_id,
        tp.tod_description
 FROM tod_slots     ts
 JOIN timing_plans  tp ON tp.intersection_id = ts.intersection_id
+                     AND tp.scenario         = ts.scenario
                      AND tp.plan_number      = ts.plan_number
 JOIN intersections i  ON i.id = ts.intersection_id
 JOIN corridors     c  ON c.id = i.corridor_id;
@@ -245,6 +281,7 @@ SELECT i.id                                            AS intersection_id,
        i.tab_name,
        i.name                                          AS intersection,
        i.natural_order,
+       ts.scenario,
        ts.day_type,
        ts.slot_index,
        (ts.slot_index * interval '15 minutes')::time   AS slot_time,
@@ -258,6 +295,7 @@ SELECT i.id                                            AS intersection_id,
        pm.yellow_allred_s
 FROM tod_slots       ts
 JOIN timing_plans    tp ON tp.intersection_id = ts.intersection_id
+                       AND tp.scenario         = ts.scenario
                        AND tp.plan_number      = ts.plan_number
 JOIN plan_movements  pm ON pm.timing_plan_id = tp.id
 JOIN intersections   i  ON i.id = ts.intersection_id

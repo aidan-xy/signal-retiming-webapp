@@ -1,10 +1,11 @@
 """
 Thin read API over the signal-timing database.
 
-Scope matches the database: existing ("as-built") timings only, for whatever
-corridors have been imported. No write endpoints -- loading data is
-import_workbook.py's (and, for the timespace map, import_timespace_slots.py's)
-job, not this API's.
+Scope matches the database: existing ("as-built") and proposed timings, for
+whatever corridors have been imported. Proposed data is currently a
+placeholder (see extract.py) until a retiming is decided and re-imported.
+No write endpoints -- loading data is import_workbook.py's job, not this
+API's.
 
 Run:
     export SIGNALS_DSN="postgresql://username:password@localhost/signals"
@@ -23,7 +24,7 @@ from .routers import corridors, intersections, timespace, timing
 
 app = FastAPI(
     title="Signal Timing API",
-    description="Read-only API over as-built NYCDOT signal timing data.",
+    description="Read-only API over as-built and proposed NYCDOT signal timing data.",
     version="0.1.0",
 )
 

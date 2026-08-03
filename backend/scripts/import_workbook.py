@@ -1,14 +1,21 @@
 #!/usr/bin/env python3
 """
-Import existing signal timings from a NYCDOT corridor comparison workbook
-into PostgreSQL.
+Import existing ("as-built") and proposed signal timings from a NYCDOT
+corridor comparison workbook into PostgreSQL.
+
+Proposed timing plans are imported as-is even though the workbook currently
+leaves them as a placeholder (formula copies of Existing, only 2 of the
+block's plan-number slots filled in, no retiming decided) -- see
+extract.py's module docstring. This gets the schema/API ready for the
+moment real proposed numbers replace those formulas, without a second
+migration.
 
     # inspect what would be loaded, no database needed
     python import_workbook.py corridor.xlsm --corridor "Linden Blvd" --dry-run
 
     # load it
     python import_workbook.py corridor.xlsm --corridor "Linden Blvd" \
-        --borough Brooklyn --dsn "postgresql://user@localhost/signals"
+        
 
 Exit codes: 0 ok, 1 extraction failure, 2 validation warnings with --strict.
 """
@@ -71,7 +78,9 @@ def main() -> int:
         if inter.warnings:
             warnings += len(inter.warnings)
             flag = f"  ({len(inter.warnings)} warning(s))"
-        print(f"  {order:>3}  {tab:<20} {len(inter.timing_plans)} plans, "
+        n_existing = sum(1 for p in inter.timing_plans if p.scenario == "existing")
+        n_proposed = sum(1 for p in inter.timing_plans if p.scenario == "proposed")
+        print(f"  {order:>3}  {tab:<20} {n_existing} existing + {n_proposed} proposed plan(s), "
               f"{len(inter.splits)} splits, {len(inter.tod_slots)} tod slots{flag}",
               file=sys.stderr)
         for w in inter.warnings:
