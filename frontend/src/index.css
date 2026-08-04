@@ -42,8 +42,8 @@
   --heat-7: #163f61;
 
   /* type */
-  --font-display: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif;
-  --font-body: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-display: 'Whitney', Arial, sans-serif;
+  --font-body: 'Whitney', Arial, sans-serif;
   --font-mono: 'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace;
 
   /* layout */

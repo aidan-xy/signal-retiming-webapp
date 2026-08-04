@@ -6,6 +6,7 @@ import 'leaflet/dist/leaflet.css'
 import { MEASUREMENTS, getMeasurement } from '../utils/timespaceMeasurements'
 import { computeValueRange, valueToHeatBucket } from '../utils/heatScale'
 import HeatLegend from './HeatLegend'
+import hdrLogo from '../assets/HDR_logo.svg'
 import './MapView.css'
 
 // Esri World Imagery's documented service maximum is zoom 19 -- CARTO's
@@ -311,6 +312,8 @@ export default function MapView({
         <span className="map-view__legend-swatch" />
         Linden Blvd corridor — {intersections.length} intersections
       </div>
+
+      <img src={hdrLogo} alt="HDR" className="map-view__hdr-logo" />
     </div>
   )
 }
