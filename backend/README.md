@@ -29,7 +29,7 @@ the full breakdown.
 ```bash
 pip install -r requirements.txt
 
-export SIGNALS_DSN="postgresql://signals_ro@localhost/signals"
+export SIGNALS_DSN="postgresql://username:password@localhost/signals"
 uvicorn app.main:app --reload
 ```
 

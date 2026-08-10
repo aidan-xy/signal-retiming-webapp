@@ -17,7 +17,7 @@ DATABASE_URL = os.environ.get("SIGNALS_DSN") or os.environ.get("DATABASE_URL")
 if not DATABASE_URL:
     raise RuntimeError(
         "Set SIGNALS_DSN (or DATABASE_URL) to a postgresql:// DSN, e.g.\n"
-        "  export SIGNALS_DSN='postgresql://signals_ro@localhost/signals'"
+        "  export SIGNALS_DSN='postgresql://username:password@localhost/signals'"
     )
 
 engine = create_engine(DATABASE_URL, pool_pre_ping=True, future=True)
