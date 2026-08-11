@@ -24,7 +24,7 @@ export default function Header({
   return (
     <header className="app-header">
       <div className="app-header__title">
-        <span className="app-header__eyebrow">NYCDOT · Signal Timing</span>
+        <span className="app-header__eyebrow">Signal Timing</span>
         <h1>
           {corridor ? corridor.name : 'Loading corridor…'}
           {corridor?.borough && <span className="app-header__borough"> · {corridor.borough}</span>}
