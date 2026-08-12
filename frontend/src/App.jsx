@@ -183,6 +183,7 @@ export default function App() {
           <div className="app__map">
             {status === 'ready' && (
               <MapView
+                corridor={corridor}
                 intersections={intersections}
                 selectedId={selectedId}
                 onSelect={setSelectedId}

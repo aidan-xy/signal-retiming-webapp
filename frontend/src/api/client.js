@@ -14,10 +14,10 @@ async function getJSON(path) {
   return res.json()
 }
 
-// The API has no lat/lon columns yet -- schema.sql would need those added to
-// place markers precisely. Until then the map falls back to interpolating
-// along the known corridor path, in the same order the API returns
-// (natural_order). See utils/corridorPath.js.
+// The API carries lat/lon on corridors and intersections (see schema.sql).
+// When an intersection has them, the map places its marker there directly;
+// rows still missing coordinates fall back to name-match/interpolation along
+// the corridor path (see utils/corridorPath.js).
 
 function pivotPlans(rows) {
   const byPlan = new Map()
@@ -135,7 +135,9 @@ export function createApiDataSource(corridorName) {
     async getIntersections() {
       const corridor = await this.getCorridor()
       const list = await getJSON(`/corridors/${corridor.id}/intersections`)
-      return list.map((i) => ({ ...i, lat: null, lon: null }))
+      // lat/lon come straight from the API; placeIntersections fills in any
+      // that are still null (name-match, then interpolation).
+      return list.map((i) => ({ ...i, lat: i.lat ?? null, lon: i.lon ?? null }))
     },
 
     async getIntersectionDetail(id, scenario = 'existing') {
