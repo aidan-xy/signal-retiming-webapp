@@ -29,6 +29,11 @@ CREATE TABLE corridors (
     id              serial PRIMARY KEY,
     name            text NOT NULL UNIQUE,           -- e.g. 'Linden Blvd'
     borough         text,
+    -- Map center for the corridor. Nullable: a corridor may be imported before
+    -- its geometry is known. In practice derived from the mean of its
+    -- intersections' coordinates (see the location seed SQL).
+    lat             numeric(9,6),
+    lon             numeric(9,6),
     created_at      timestamptz NOT NULL DEFAULT now()
 );
 
@@ -46,6 +51,12 @@ CREATE TABLE intersections (
     tab_name              text NOT NULL,            -- 'Flatbush_Ave'
     name                  text NOT NULL,            -- 'Flatbush Ave'
     natural_order         integer NOT NULL,         -- spatial order along corridor (W->E)
+    -- Signal location. Nullable: coordinates come from an external source (the
+    -- NYCDOT signal KMZ), not the timing workbook, so an intersection can be
+    -- imported before its lat/lon is known. When present, the frontend places
+    -- the map marker here directly instead of name-matching or interpolating.
+    lat                   numeric(9,6),
+    lon                   numeric(9,6),
     major_crosswalk_ft    numeric(6,2),             -- crosswalk length across the major street
     minor_crosswalk_ft    numeric(6,2),
     source_file           text,                     -- provenance: workbook filename

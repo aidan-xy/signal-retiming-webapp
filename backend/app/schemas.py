@@ -18,6 +18,8 @@ class CorridorOut(ORMModel):
     id: int
     name: str
     borough: Optional[str]
+    lat: Optional[float]
+    lon: Optional[float]
     created_at: datetime.datetime
 
 
@@ -26,6 +28,8 @@ class IntersectionSummary(ORMModel):
     tab_name: str
     name: str
     natural_order: int
+    lat: Optional[float]
+    lon: Optional[float]
 
 
 class IntersectionOut(ORMModel):
@@ -34,6 +38,8 @@ class IntersectionOut(ORMModel):
     tab_name: str
     name: str
     natural_order: int
+    lat: Optional[float]
+    lon: Optional[float]
     major_crosswalk_ft: Optional[float]
     minor_crosswalk_ft: Optional[float]
     source_file: Optional[str]
