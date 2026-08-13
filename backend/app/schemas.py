@@ -17,7 +17,8 @@ class ORMModel(BaseModel):
 class CorridorOut(ORMModel):
     id: int
     name: str
-    borough: Optional[str]
+    city: Optional[str]
+    state: Optional[str]
     lat: Optional[float]
     lon: Optional[float]
     created_at: datetime.datetime

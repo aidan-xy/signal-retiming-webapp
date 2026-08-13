@@ -21,14 +21,16 @@ import psycopg2.extras
 from extract import Intersection
 
 
-def _upsert_corridor(cur, name: str, borough: str | None) -> int:
+def _upsert_corridor(cur, name: str, city: str | None, state: str | None) -> int:
     cur.execute(
         """
-        INSERT INTO corridors (name, borough) VALUES (%s, %s)
-        ON CONFLICT (name) DO UPDATE SET borough = COALESCE(EXCLUDED.borough, corridors.borough)
+        INSERT INTO corridors (name, city, state) VALUES (%s, %s, %s)
+        ON CONFLICT (name) DO UPDATE SET
+            city  = COALESCE(EXCLUDED.city, corridors.city),
+            state = COALESCE(EXCLUDED.state, corridors.state)
         RETURNING id
         """,
-        (name, borough),
+        (name, city, state),
     )
     return cur.fetchone()[0]
 
@@ -181,13 +183,14 @@ def load_intersection(cur, corridor_id: int, inter: Intersection,
     return iid
 
 
-def load_corridor(dsn: str, corridor_name: str, borough: str | None,
-                  intersections: list[Intersection], source_file: str) -> None:
+def load_corridor(dsn: str, corridor_name: str, city: str | None,
+                  state: str | None, intersections: list[Intersection],
+                  source_file: str) -> None:
     conn = psycopg2.connect(dsn)
     try:
         with conn:
             with conn.cursor() as cur:
-                cid = _upsert_corridor(cur, corridor_name, borough)
+                cid = _upsert_corridor(cur, corridor_name, city, state)
                 for inter in intersections:
                     load_intersection(cur, cid, inter, source_file)
     finally:

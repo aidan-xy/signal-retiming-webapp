@@ -28,7 +28,8 @@ BEGIN;
 CREATE TABLE corridors (
     id              serial PRIMARY KEY,
     name            text NOT NULL UNIQUE,           -- e.g. 'Linden Blvd'
-    borough         text,
+    city            text,                           -- e.g. 'Brooklyn'
+    state           text,                           -- e.g. 'NY'
     -- Map center for the corridor. Nullable: a corridor may be imported before
     -- its geometry is known. In practice derived from the mean of its
     -- intersections' coordinates (see the location seed SQL).

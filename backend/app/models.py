@@ -35,7 +35,8 @@ class Corridor(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(unique=True)
-    borough: Mapped[Optional[str]]
+    city: Mapped[Optional[str]]
+    state: Mapped[Optional[str]]
     lat: Mapped[Optional[float]] = mapped_column(Numeric(9, 6))
     lon: Mapped[Optional[float]] = mapped_column(Numeric(9, 6))
     created_at: Mapped[datetime.datetime]
