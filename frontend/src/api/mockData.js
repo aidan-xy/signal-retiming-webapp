@@ -10,7 +10,7 @@
  * Pkwy", which isn't part of the real 30-intersection corridor.
  */
 
-const CORRIDOR = { id: 1, name: 'Linden Blvd', borough: 'Brooklyn' }
+const CORRIDOR = { id: 1, name: 'Linden Blvd', city: 'Brooklyn', state: 'NY' }
 
 // Compact per-intersection specs -- deliberately not six full hand-written
 // records, in the same spirit as extract.py: describe the shape once, build

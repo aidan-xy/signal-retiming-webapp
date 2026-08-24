@@ -66,6 +66,7 @@ function FitToRoute({ positions }) {
 // the overlay on/off toggle stay local -- they're purely this page's own
 // display choices, not something the table page has an analog for.
 export default function MapView({
+  corridor,
   intersections,
   selectedId,
   onSelect,
@@ -117,11 +118,20 @@ export default function MapView({
     [intersections]
   )
 
+  // Initial center: first marker, else the corridor's own center from the
+  // API, else a neutral NYC fallback. FitToRoute overrides this once markers
+  // are known.
+  const initialCenter =
+    positions[0] ||
+    (corridor?.lat != null && corridor?.lon != null
+      ? [corridor.lat, corridor.lon]
+      : [40.65, -73.95])
+
   return (
     <div className="map-view">
       <MapContainer
         ref={mapRef}
-        center={positions[0] || [40.65, -73.95]}
+        center={initialCenter}
         zoom={13}
         maxZoom={MAX_ZOOM}
         scrollWheelZoom
@@ -310,7 +320,7 @@ export default function MapView({
 
       <div className="map-view__legend">
         <span className="map-view__legend-swatch" />
-        Linden Blvd corridor — {intersections.length} intersections
+        {corridor?.name ?? 'Corridor'} — {intersections.length} intersections
       </div>
 
       <img src={hdrLogo} alt="HDR" className="map-view__hdr-logo" />

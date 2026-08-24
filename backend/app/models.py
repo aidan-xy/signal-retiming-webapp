@@ -35,7 +35,10 @@ class Corridor(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(unique=True)
-    borough: Mapped[Optional[str]]
+    city: Mapped[Optional[str]]
+    state: Mapped[Optional[str]]
+    lat: Mapped[Optional[float]] = mapped_column(Numeric(9, 6))
+    lon: Mapped[Optional[float]] = mapped_column(Numeric(9, 6))
     created_at: Mapped[datetime.datetime]
 
     intersections: Mapped[list["Intersection"]] = relationship(
@@ -55,6 +58,8 @@ class Intersection(Base):
     tab_name: Mapped[str]
     name: Mapped[str]
     natural_order: Mapped[int]
+    lat: Mapped[Optional[float]] = mapped_column(Numeric(9, 6))
+    lon: Mapped[Optional[float]] = mapped_column(Numeric(9, 6))
     major_crosswalk_ft: Mapped[Optional[float]] = mapped_column(Numeric(6, 2))
     minor_crosswalk_ft: Mapped[Optional[float]] = mapped_column(Numeric(6, 2))
     source_file: Mapped[Optional[str]]

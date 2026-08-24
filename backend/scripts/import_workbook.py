@@ -15,7 +15,7 @@ migration.
 
     # load it
     python import_workbook.py corridor.xlsm --corridor "Linden Blvd" \
-        
+        --city "Brooklyn" --state "NY" --dsn "$SIGNALS_DSN"
 
 Exit codes: 0 ok, 1 extraction failure, 2 validation warnings with --strict.
 """
@@ -37,7 +37,8 @@ def main() -> int:
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("workbook", help="path to the .xlsm corridor workbook")
     ap.add_argument("--corridor", required=True, help='corridor name, e.g. "Linden Blvd"')
-    ap.add_argument("--borough")
+    ap.add_argument("--city", help='city the corridor is in, e.g. "Brooklyn"')
+    ap.add_argument("--state", help='state the corridor is in, e.g. "NY"')
     ap.add_argument("--dsn", default=os.environ.get("SIGNALS_DSN"),
                     help="PostgreSQL DSN (or set SIGNALS_DSN)")
     ap.add_argument("--dry-run", action="store_true",
@@ -110,7 +111,8 @@ def main() -> int:
     load.load_corridor(
         dsn=args.dsn,
         corridor_name=args.corridor,
-        borough=args.borough,
+        city=args.city,
+        state=args.state,
         intersections=intersections,
         source_file=os.path.basename(args.workbook),
     )

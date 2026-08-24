@@ -27,7 +27,12 @@ export default function Header({
         <span className="app-header__eyebrow">Signal Timing</span>
         <h1>
           {corridor ? corridor.name : 'Loading corridor…'}
-          {corridor?.borough && <span className="app-header__borough"> · {corridor.borough}</span>}
+          {(corridor?.city || corridor?.state) && (
+            <span className="app-header__location">
+              {' · '}
+              {[corridor.city, corridor.state].filter(Boolean).join(', ')}
+            </span>
+          )}
         </h1>
       </div>
 

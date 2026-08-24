@@ -39,7 +39,7 @@
   text-overflow: ellipsis;
 }
 
-.app-header__borough {
+.app-header__location {
   font-weight: 400;
   color: var(--route-soft);
 }
