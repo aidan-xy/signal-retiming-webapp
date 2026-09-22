@@ -12,12 +12,14 @@
 -- counterpart reflects a deliberate "no change here" decision, not an
 -- unfilled placeholder.
 --
--- The workbook also has no precomputed Major/Minor movement-summary block
--- for Proposed (the 'MajorG' anchor block extract.py reads for
--- plan_movements exists only once per tab, for Existing) and its
--- Weekday/WeekendProposedPlan TOD columns resolve to a literal "P" string
--- rather than a plan number. Both are therefore left unpopulated for
--- scenario = 'proposed'.
+-- Proposed's tod_slots/plan_movements come from a different part of the
+-- workbook than Existing's: there's no per-plan movement-summary block for
+-- Proposed (the 'MajorG' anchor block exists only once per tab, for
+-- Existing) and its Weekday/WeekendProposedPlan TOD columns resolve to a
+-- code (e.g. "AP"), not a plan number directly -- see extract.py's module
+-- docstring for how both are derived from the workbook's per-slot resolved
+-- table instead. Populated per intersection when that table could be read;
+-- a tab where it couldn't still keeps its proposed timing_plans rows.
 --
 -- Target: PostgreSQL 13+
 -- =============================================================================
@@ -194,18 +196,18 @@ CREATE INDEX ix_timing_plans_intersection ON timing_plans (intersection_id);
 -- slot of the day (0 = 00:00 ... 95 = 23:45), split out by weekday/weekend.
 --
 -- Source of truth: each intersection tab's own precomputed helper columns
--- (WeekdayExistingPlan / WeekendExistingPlan, 96 rows) that the workbook's
--- Time_SpaceMap tab already reads from -- imported directly rather than
--- re-parsed out of tod_description, which is free text and not reliably
--- machine-parseable (see comment on timing_plans above).
+-- (WeekdayExistingPlan / WeekendExistingPlan, and their Proposed
+-- counterparts, 96 rows each) that the workbook's Time_SpaceMap tab already
+-- reads from -- imported directly rather than re-parsed out of
+-- tod_description, which is free text and not reliably machine-parseable
+-- (see comment on timing_plans above).
 --
 -- scenario is carried here too (not just plan_number) since Existing plan 1
--- and Proposed plan 1 are different timing_plans rows. In practice only
--- scenario = 'existing' rows are populated: the workbook's
--- Weekday/WeekendProposedPlan columns resolve to a literal "P" string
--- rather than a real plan number (see extract.py), so there is nothing
--- machine-parseable to load for scenario = 'proposed'. The column stays
--- scenario-aware so no migration is needed if that ever changes.
+-- and Proposed plan 1 are different timing_plans rows. Proposed's columns
+-- resolve to a code (e.g. "AP"), not a plan number directly -- see
+-- extract.py's module docstring -- and a tab whose per-slot table couldn't
+-- be resolved that way simply has no scenario = 'proposed' rows here, while
+-- keeping its proposed timing_plans/plan_splits rows.
 --
 -- The composite FK against timing_plans' own (intersection_id, scenario,
 -- plan_number) unique constraint guarantees a slot can never point at

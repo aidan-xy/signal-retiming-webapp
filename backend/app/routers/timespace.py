@@ -21,10 +21,12 @@ plus, per Major/Minor movement, how much of that cycle is vehicle green
 clearance -- everything the map needs to draw progression bands, not just
 mark which plan is active.
 
-`scenario` defaults to 'existing'. 'proposed' is accepted too, but 404s
-everywhere: the workbook has no numerically-resolvable Proposed TOD/movement
-data at all (see extract.py's module docstring), so tod_slots/plan_movements
-are only ever populated for scenario='existing'.
+`scenario` defaults to 'existing'. 'proposed' is accepted too -- populated
+per intersection from the workbook's own per-slot resolved table (see
+extract.py's module docstring) where that table could be read for it. A
+corridor where none of its intersections' proposed data could be read still
+404s (nothing to return); one where only some could still returns a grid,
+just missing rows for the rest.
 """
 
 from __future__ import annotations
@@ -58,10 +60,10 @@ def get_timespace(
     scenario: str = Query(
         "existing", pattern="^(existing|proposed)$",
         description=(
-            "'existing' (as-built) or 'proposed'. Proposed TOD/movement data "
-            "isn't populated in the workbook yet, so this scenario currently "
-            "404s -- see extract.py -- until a retiming is entered and "
-            "re-imported."
+            "'existing' (as-built) or 'proposed'. 'proposed' is populated per "
+            "intersection from the workbook's own per-slot table where it "
+            "could be read -- see extract.py -- so a corridor with no "
+            "resolvable proposed data anywhere 404s."
         ),
     ),
     slot_index: Optional[int] = Query(

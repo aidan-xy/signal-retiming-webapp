@@ -38,12 +38,6 @@ layout, which mirrors the Existing block's row math closely but isn't at a
 fixed column either -- it's located per tab by scanning for the note text,
 same as everything else here.
 
-That staging block has no analog of the movement-summary block (below) or a
-numerically-resolvable TOD slot table -- the workbook's own
-Weekday/WeekendProposedPlan columns resolve to a literal "P" string, not a
-plan number -- so plan_movements and tod_slots are only ever populated for
-scenario = 'existing'.
-
 The row-14 headers are a second, independent anchor from the row 7
 tod_description text: they mark the workbook's own precomputed day/time ->
 plan lookup table (what the Time_SpaceMap tab's VLOOKUPs read from), already
@@ -51,28 +45,39 @@ expanded to one row per 15-minute slot. tod_description stays free text for
 display/provenance only -- it's not reliably parseable on its own (some
 cells pack multiple disjoint windows into one string), so the slot-level
 resolution is read from these columns directly instead of derived from it.
+'WeekdayExistingPlan' / 'WeekendExistingPlan' resolve to Existing's plan
+numbers directly; 'WeekdayProposedPlan' / 'WeekendProposedPlan' resolve to a
+*code* instead (Proposed's plan-number row isn't reliably numeric -- see
+above), built from the final-proposed staging block's own label row (one row
+above its plan-number row) with a trailing "P" (label "A" -> code "AP", "AM"
+-> "AMP", a bare number -> e.g. "1P"). See _read_new_plan_codes /
+_read_proposed_tod_slots.
 
-Like the main timing block, this column is NOT at a fixed letter -- Kings_Hwy's
-extra channels/phase groups shift it right (AX/AY everywhere else, BF/BG at
-Kings_Hwy), so it's located by scanning row 14 for the header text, not
-hardcoded.
+Like the main timing block, none of these columns are at a fixed letter --
+Kings_Hwy's extra channels/phase groups shift them right (AX/AY everywhere
+else, BF/BG at Kings_Hwy for the Existing pair), so they're located by
+scanning row 14 for the header text, not hardcoded.
 
-A second summary block (further right, rows ~65-92 on a standard tab, shifted
-to ~76-103 on Kings_Hwy) gives the same Existing plans' approach-level detail
-the Time_SpaceMap tab draws bands from: per plan, the Major and Minor
-streets' vehicle green ("Split"), pedestrian WALK ("WK"), flashing DON'T WALK
-("FLDW"), and combined yellow+all-red clearance ("Y+AR"). This is *not*
-re-derivable by summing split_indications per channel.movement_class: several
-tabs (Kings_Hwy, E_58_St) have more than one vehicle channel sharing the same
-movement_class (e.g. a through + a protected-left channel both tagged
-'Major'), so a generic per-channel sum would double-count. The workbook
-resolves that ambiguity by hand, pointing each of these eight cells at one
-specific channel per tab -- so, like the TOD slot columns above, these are
-read as the workbook's own precomputed answer rather than re-derived.
-The block is a fixed template relative to its own 'MajorG' anchor cell (see
-_read_plan_movements), which is located by scanning rather than hardcoding
-row/column, since that anchor itself moves tab to tab exactly like everything
-else here.
+A second summary area (immediately left of the row-14 headers, rows ~9-14)
+gives the same approach-level detail the Time_SpaceMap tab draws progression
+bands from, resolved per 15-minute slot rather than per plan column: per
+slot, per day type, per scenario, the Major and Minor streets' vehicle green
+("Split"), pedestrian WALK ("WK"), flashing DON'T WALK ("FLDW"), and combined
+yellow+all-red clearance ("Y+AR"), plus cycle length and offset. Column
+headers spell out the full combination (e.g. "WeekdayProposedMajorFLDW"), so
+each is located the same way -- scanning row 14 for that exact text. Existing
+also has a second, per-*plan* (not per-slot) copy of this same detail further
+right (the 'MajorG'-anchored block -- see _read_plan_movements): this is *not*
+re-derivable by summing split_indications per channel.movement_class, since
+several tabs (Kings_Hwy, E_58_St) have more than one vehicle channel sharing
+the same movement_class (e.g. a through + a protected-left channel both
+tagged 'Major'), so a generic per-channel sum would double-count -- the
+workbook resolves that ambiguity by hand, pointing each of these eight cells
+at one specific channel per tab. Proposed has no such per-plan block of its
+own, so its plan_movements are derived from the per-slot table instead: for
+each proposed plan, find any one slot (weekday or weekend) where it's active
+and read that slot's Major/Minor values -- valid because a plan's own
+movement durations don't vary slot to slot, only which plan is active does.
 """
 
 from __future__ import annotations
@@ -106,10 +111,15 @@ MAX_SCAN_COL = 200
 # 'OFFSET' label) lines up with the same row numbers as the Existing block.
 NEW_PLAN_NOTE_TEXT = "copy and paste into the new signal timing sheet"
 ROW_NEW_PLAN_NUMBER = 5
+# One row above ROW_NEW_PLAN_NUMBER: each plan's TOD-resolution code (e.g.
+# 'A', 'AM', or a bare number) -- see _read_new_plan_codes.
+ROW_NEW_PLAN_LABEL = 4
 
 # Time-of-day slot resolution table: 96 rows (15-minute slots, 00:00-23:45)
-# below a header row, holding the Existing plan number active in that slot.
-# Same range the Time_SpaceMap tab's own VLOOKUPs (DG16:DI111) read from.
+# below a header row, holding the plan active in that slot. Same range the
+# Time_SpaceMap tab's own VLOOKUPs (DG16:DI111) read from. Existing's columns
+# resolve directly to a plan number; Proposed's resolve to a code (see
+# TOD_SLOT_HEADERS_PROPOSED / _read_proposed_tod_slots).
 ROW_TOD_SLOT_HEADER = 14
 TOD_SLOT_FIRST_ROW = 16
 TOD_SLOT_LAST_ROW = 111
@@ -117,6 +127,22 @@ TOD_SLOT_COUNT = TOD_SLOT_LAST_ROW - TOD_SLOT_FIRST_ROW + 1  # 96
 TOD_SLOT_HEADERS = {
     "weekday": "WeekdayExistingPlan",
     "weekend": "WeekendExistingPlan",
+}
+TOD_SLOT_HEADERS_PROPOSED = {
+    "weekday": "WeekdayProposedPlan",
+    "weekend": "WeekendProposedPlan",
+}
+
+# Per-slot Major/Minor movement metrics, resolved for both scenarios in the
+# same row-14-headered area as TOD_SLOT_HEADERS_PROPOSED (headers spell out
+# the full combination, e.g. "WeekdayProposedMajorFLDW") -- see
+# _read_proposed_plan_movements. Metric label matches MOVEMENT_ROW_LABELS'
+# suffix so the two stay in sync.
+PROPOSED_MOVEMENT_METRIC_LABELS = {
+    "split_s": "Split",
+    "wk_s": "WK",
+    "fldw_s": "FLDW",
+    "yellow_allred_s": "Y+AR",
 }
 
 # Approach-level movement summary block: an anchor cell ('MajorG') plus fixed
@@ -207,6 +233,7 @@ class TodSlot:
     day_type: str        # 'weekday' | 'weekend'
     slot_index: int       # 0 = 00:00 ... 95 = 23:45 (15-minute resolution)
     plan_number: int      # must match a TimingPlan.plan_number on the same intersection
+    scenario: str = "existing"     # 'existing' | 'proposed'
 
 
 @dataclass
@@ -606,6 +633,130 @@ def _read_plan_movements(ws, plan_numbers: list[int]) -> dict[int, list[Movement
     }
 
 
+def _read_new_plan_codes(ws, block_col: int, proposed_plans: list[TimingPlan]) -> dict[str, int]:
+    """
+    Maps each proposed plan's TOD-resolution code to its plan_number, read
+    from the final-proposed staging block's label row (ROW_NEW_PLAN_LABEL,
+    one row above ROW_NEW_PLAN_NUMBER) plus a trailing "P" -- the same code
+    the WeekdayProposedPlan/WeekendProposedPlan columns resolve to (see
+    _read_proposed_tod_slots). A numeric label (e.g. 1) becomes "1P"; a text
+    label (e.g. "AM") becomes "AMP".
+    """
+    codes: dict[str, int] = {}
+    for plan in proposed_plans:
+        col = block_col + (plan.plan_number - 1)
+        label = _cell(ws, ROW_NEW_PLAN_LABEL, col)
+        if label is None:
+            continue
+        label_str = str(int(label)) if isinstance(label, (int, float)) else str(label).strip()
+        codes[f"{label_str}P"] = plan.plan_number
+    return codes
+
+
+def _read_proposed_tod_slots(ws, codes: dict[str, int]) -> list[TodSlot]:
+    """
+    Read the WeekdayProposedPlan/WeekendProposedPlan columns into one TodSlot
+    per 15-minute slot per day type, scenario='proposed'. Each cell holds a
+    code (see _read_new_plan_codes) rather than a plan number directly --
+    resolved through `codes`, the way _read_tod_slots resolves Existing's
+    numeric cells directly.
+    """
+    slots: list[TodSlot] = []
+    for day_type, header_text in TOD_SLOT_HEADERS_PROPOSED.items():
+        col = _find_tod_slot_column(ws, header_text)
+        col_letter = get_column_letter(col)
+        for slot_index, row in enumerate(range(TOD_SLOT_FIRST_ROW, TOD_SLOT_LAST_ROW + 1)):
+            raw = _cell(ws, row, col)
+            if raw is None:
+                raise LayoutError(
+                    f"{day_type} proposed plan-resolution cell {col_letter}{row} is "
+                    "blank/#N/A -- workbook's Time_SpaceMap lookup table isn't fully resolved"
+                )
+            code = str(raw).strip()
+            plan_number = codes.get(code)
+            if plan_number is None:
+                raise LayoutError(
+                    f"{day_type} slot {slot_index} ({col_letter}{row}) resolves to code "
+                    f"{code!r}, which isn't among this tab's proposed plan codes {sorted(codes)}"
+                )
+            slots.append(
+                TodSlot(day_type=day_type, slot_index=slot_index, plan_number=plan_number,
+                        scenario="proposed")
+            )
+    return slots
+
+
+def _read_proposed_plan_movements(
+    ws, codes: dict[str, int], proposed_tod_slots: list[TodSlot]
+) -> tuple[dict[int, list[MovementSummary]], list[str]]:
+    """
+    Derive Proposed's Major/Minor Split/WK/FLDW/Y+AR per plan from the
+    per-slot resolved table (see module docstring) rather than a per-plan
+    block like Existing's -- Proposed has no such block of its own. For each
+    plan_number, use the first slot (preferring weekday) where it's active:
+    valid because a plan's own movement durations are constant across every
+    slot it's active for -- only which plan is active varies slot to slot.
+
+    A plan whose chosen slot has a genuinely blank/#N/A cell for one of the
+    eight metrics (seen on most tabs, always the same low-traffic plan's
+    Weekend Major Split -- a gap in the workbook itself, not a misread) is
+    skipped rather than raised: recorded as a warning, movements just aren't
+    loaded for that one plan, and every other plan's real data still loads.
+    """
+    # All 16 (day_type, movement_class, metric) -> column lookups, computed
+    # once rather than per plan -- the header text depends only on these,
+    # not on which plan/row is being read. A LayoutError here (a whole
+    # column missing, not just one cell) is a structural surprise, so it's
+    # left to propagate rather than caught per plan below.
+    movement_cols: dict[tuple[str, str, str], int] = {}
+    for day_type in TOD_SLOT_HEADERS_PROPOSED:
+        day_label = day_type.capitalize()
+        for movement_class in ("Major", "Minor"):
+            for metric, metric_label in PROPOSED_MOVEMENT_METRIC_LABELS.items():
+                header = f"{day_label}Proposed{movement_class}{metric_label}"
+                movement_cols[(day_type, movement_class, metric)] = _find_tod_slot_column(ws, header)
+
+    first_slot_by_plan: dict[int, TodSlot] = {}
+    for slot in proposed_tod_slots:
+        existing = first_slot_by_plan.get(slot.plan_number)
+        if existing is None or (slot.day_type == "weekday" and existing.day_type != "weekday"):
+            first_slot_by_plan[slot.plan_number] = slot
+
+    by_plan: dict[int, list[MovementSummary]] = {}
+    warnings: list[str] = []
+    for plan_number, slot in first_slot_by_plan.items():
+        row = TOD_SLOT_FIRST_ROW + slot.slot_index
+        movements = []
+        blank_metric: str | None = None
+        for movement_class in ("Major", "Minor"):
+            metrics = {}
+            for metric, metric_label in PROPOSED_MOVEMENT_METRIC_LABELS.items():
+                col = movement_cols[(slot.day_type, movement_class, metric)]
+                value = _int(ws, row, col)
+                if value is None:
+                    blank_metric = f"{slot.day_type}Proposed{movement_class}{metric_label}"
+                    break
+                metrics[metric] = value
+            if blank_metric:
+                break
+            movements.append(MovementSummary(movement_class=movement_class, **metrics))
+        if blank_metric:
+            warnings.append(
+                f"proposed plan {plan_number}: {blank_metric} (row {row}) is blank/#N/A "
+                "-- movements not loaded for this plan"
+            )
+            continue
+        by_plan[plan_number] = movements
+
+    never_resolved = set(codes.values()) - set(first_slot_by_plan)
+    if never_resolved:
+        warnings.append(
+            f"no resolvable slot found for proposed plan(s) {sorted(never_resolved)} -- "
+            "movements not loaded for them"
+        )
+    return by_plan, warnings
+
+
 # --------------------------------------------------------------------------
 # validation
 # --------------------------------------------------------------------------
@@ -656,17 +807,17 @@ def extract_intersection(ws, tab_name: str, display_name: str,
     # Final-proposed staging block: same splits/phase groups (the phasing
     # diagram is shared with Existing -- see module docstring), its own
     # plan/cycle/offset/duration cells, read as real decided values rather
-    # than a comparison-block placeholder. No movement-summary block or
-    # resolvable TOD table exists for it, so plan_movements/tod_slots are
-    # left empty for these plans. A missing OFFSET row (see Kings_Hwy in the
-    # module docstring) falls back to Existing's offset per plan rather than
-    # discarding the block's real cycle/split data -- see
+    # than a comparison-block placeholder. A missing OFFSET row (see
+    # Kings_Hwy in the module docstring) falls back to Existing's offset per
+    # plan rather than discarding the block's real cycle/split data -- see
     # _read_new_proposed_plans. Read as a soft-fail otherwise: a tab whose
     # staging block can't be located at all is a layout surprise worth
     # surfacing as a warning rather than aborting the whole (otherwise-good)
     # Existing import for that tab.
     warnings: list[str] = []
     existing_by_number = {p.plan_number: p for p in plans}
+    proposed_plans: list[TimingPlan] = []
+    new_plan_col: int | None = None
     try:
         new_plan_col = _find_new_plan_block(ws)
         proposed_plans, proposed_warnings = _read_new_proposed_plans(
@@ -676,6 +827,24 @@ def extract_intersection(ws, tab_name: str, display_name: str,
         warnings.extend(proposed_warnings)
     except LayoutError as exc:
         warnings.append(f"proposed timing block not read: {exc}")
+
+    # Proposed's own TOD/movement data (see module docstring): a soft-fail
+    # separate from the plan-level try above, so a tab whose per-slot table
+    # can't be resolved still keeps its real proposed cycle/offset/split
+    # values -- it just won't drive the timespace map/table for that scenario.
+    if proposed_plans and new_plan_col is not None:
+        try:
+            codes = _read_new_plan_codes(ws, new_plan_col, proposed_plans)
+            proposed_tod_slots = _read_proposed_tod_slots(ws, codes)
+            tod_slots.extend(proposed_tod_slots)
+            movements_by_plan_proposed, movement_warnings = _read_proposed_plan_movements(
+                ws, codes, proposed_tod_slots
+            )
+            warnings.extend(movement_warnings)
+            for plan in proposed_plans:
+                plan.movements = movements_by_plan_proposed.get(plan.plan_number, [])
+        except LayoutError as exc:
+            warnings.append(f"proposed TOD/movement data not read: {exc}")
 
     # Crosswalk widths live just below the timing block, labelled in column B.
     major = minor = None

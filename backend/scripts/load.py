@@ -165,12 +165,13 @@ def load_intersection(cur, corridor_id: int, inter: Intersection,
     # time-of-day slots: which plan is active per 15-min slot, per day type.
     # Keyed by (intersection_id, scenario, plan_number) -- matching tod_slots'
     # composite FK onto timing_plans -- rather than the timing_plan id, so this
-    # insert doesn't need to track pid per plan_number separately. Only ever
-    # populated for scenario='existing' -- see extract.py's module docstring
-    # for why the Proposed block has nothing resolvable to read here yet.
+    # insert doesn't need to track pid per plan_number separately. Carries
+    # both scenarios: Proposed's own per-slot resolution table (see
+    # extract.py's module docstring) when it could be read for this
+    # intersection, alongside Existing's.
     if inter.tod_slots:
         slot_rows = [
-            (iid, "existing", s.day_type, s.slot_index, s.plan_number)
+            (iid, s.scenario, s.day_type, s.slot_index, s.plan_number)
             for s in inter.tod_slots
         ]
         psycopg2.extras.execute_values(
