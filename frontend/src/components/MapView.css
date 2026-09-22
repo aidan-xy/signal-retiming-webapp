@@ -345,9 +345,9 @@
   display: none;
 }
 
-/* A value that's real but hasn't diverged from the other scenario -- a
-   dashed ring keeps its real heat color, with only the border communicating
-   "not retimed yet". */
+/* A value that's real but matches the other scenario exactly -- a dashed
+   ring keeps its real heat color, with only the border communicating the
+   match. */
 .leaflet-tooltip.timespace-marker-tooltip.is-same-as-existing {
   border: 1.5px dashed var(--steel-soft);
 }

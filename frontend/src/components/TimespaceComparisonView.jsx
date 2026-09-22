@@ -136,8 +136,8 @@ export default function TimespaceComparisonView({
 
         <p className="timespace-page__hint">
           Existing and Proposed, same rows and columns, scrolled and
-          selected together. Dashed cells on either side are real data that
-          matches the other scenario exactly — it hasn't been retimed yet.
+          selected together. Dashed cells on either side show real data that
+          matches the other scenario exactly.
         </p>
       </div>
 

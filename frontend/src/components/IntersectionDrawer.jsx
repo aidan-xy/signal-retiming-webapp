@@ -184,9 +184,8 @@ export default function IntersectionDrawer({ intersectionId, dataSource, scenari
           !detail?.unavailable &&
           anyPlanMatchesExisting && (
             <p className="drawer__scenario-note">
-              This intersection hasn't been retimed yet — plans marked{' '}
-              <strong>SAME</strong> below are real data that still matches
-              Existing exactly.
+              Plans marked <strong>SAME</strong> below are real proposed data
+              that matches Existing exactly.
             </p>
           )}
 

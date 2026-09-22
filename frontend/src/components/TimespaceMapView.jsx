@@ -93,8 +93,8 @@ export default function TimespaceMapView({
 
         {!grid?.unavailable && grid?.scenario === 'proposed' && (
           <p className="timespace-page__hint timespace-page__hint--same">
-            Dashed cells are real proposed data that hasn't been retimed yet
-            — the value shown still matches Existing exactly.
+            Dashed cells show real proposed data that matches Existing
+            exactly.
           </p>
         )}
 

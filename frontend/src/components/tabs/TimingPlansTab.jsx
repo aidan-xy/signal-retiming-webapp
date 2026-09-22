@@ -15,7 +15,7 @@ export default function TimingPlansTab({ splits, plans }) {
                     {plan.matchesExisting && (
                       <span
                         className="timing-table__same-badge"
-                        title="Matches Existing exactly — not yet retimed"
+                        title="Matches Existing exactly"
                       >
                         SAME
                       </span>

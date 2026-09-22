@@ -180,7 +180,7 @@ export default function MapView({
                   className={`timespace-marker-tooltip heat-${heatBucket} ${
                     isSameAsExisting ? 'is-same-as-existing' : ''
                   }`}
-                  title={isSameAsExisting ? 'Matches existing — not yet retimed' : undefined}
+                  title={isSameAsExisting ? 'Matches existing' : undefined}
                 >
                   <span className="timespace-marker-tooltip__plan">P{slot.plan_number}</span>
                   <span className="timespace-marker-tooltip__value">{value ?? '—'}</span>
@@ -258,8 +258,8 @@ export default function MapView({
 
             {!grid?.unavailable && currentSlotAnyMatchesExisting && (
               <p className="map-view__timespace-status map-view__timespace-status--same">
-                Markers with a dashed ring haven't been retimed yet — the
-                value shown still matches Existing exactly.
+                Markers with a dashed ring show proposed data that matches
+                Existing exactly.
               </p>
             )}
 

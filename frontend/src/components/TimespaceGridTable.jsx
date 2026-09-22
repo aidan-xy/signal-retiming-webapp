@@ -92,7 +92,7 @@ const TimespaceGridTable = forwardRef(function TimespaceGridTable(
                     }`}
                     title={
                       isSameAsExisting
-                        ? `Plan ${slot.plan_number} · ${slot.slot_time} · matches existing, not yet retimed · click to select`
+                        ? `Plan ${slot.plan_number} · ${slot.slot_time} · matches existing · click to select`
                         : `Plan ${slot.plan_number} · ${slot.slot_time} · click to select`
                     }
                   >
