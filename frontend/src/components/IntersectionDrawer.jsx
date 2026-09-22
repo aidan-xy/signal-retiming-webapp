@@ -83,11 +83,6 @@ export default function IntersectionDrawer({ intersectionId, dataSource, scenari
     [detail]
   )
 
-  const anyPlanIsPlaceholder = useMemo(
-    () => Boolean(detail?.plans?.some((p) => p.placeholder)),
-    [detail]
-  )
-
   const anyPlanMatchesExisting = useMemo(
     () => Boolean(detail?.plans?.some((p) => p.matchesExisting)),
     [detail]
@@ -178,19 +173,17 @@ export default function IntersectionDrawer({ intersectionId, dataSource, scenari
           </div>
         </div>
 
-        {status === 'ready' && scenario === 'proposed' && anyPlanIsPlaceholder && (
+        {status === 'ready' && scenario === 'proposed' && detail?.unavailable && (
           <p className="drawer__scenario-note">
-            No proposed data has been imported for this intersection yet —
-            plans shown as <strong>IP</strong> mirror Existing's shape as a
-            placeholder.
+            Proposed timing couldn't be read for this intersection.
           </p>
         )}
 
         {status === 'ready' &&
           scenario === 'proposed' &&
-          !anyPlanIsPlaceholder &&
+          !detail?.unavailable &&
           anyPlanMatchesExisting && (
-            <p className="drawer__scenario-note drawer__scenario-note--muted">
+            <p className="drawer__scenario-note">
               This intersection hasn't been retimed yet — plans marked{' '}
               <strong>SAME</strong> below are real data that still matches
               Existing exactly.

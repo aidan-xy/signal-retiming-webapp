@@ -83,32 +83,32 @@ export default function TimespaceMapView({
           </select>
         </label>
 
-        {grid && <HeatLegend range={valueRange} />}
+        {grid && !grid.unavailable && <HeatLegend range={valueRange} />}
 
-        {grid?.placeholder && (
-          <p className="timespace-page__hint timespace-page__hint--placeholder">
-            No proposed data has been imported yet — cells show{' '}
-            <strong>IP</strong> (in progress) in place of a value, using the
-            Existing plan schedule as a placeholder.
+        {grid?.unavailable && (
+          <p className="timespace-page__hint timespace-page__hint--unavailable">
+            Proposed time-space data isn't available for this corridor.
           </p>
         )}
 
-        {!grid?.placeholder && grid?.scenario === 'proposed' && (
+        {!grid?.unavailable && grid?.scenario === 'proposed' && (
           <p className="timespace-page__hint timespace-page__hint--same">
             Dashed cells are real proposed data that hasn't been retimed yet
             — the value shown still matches Existing exactly.
           </p>
         )}
 
-        <p className="timespace-page__hint">
-          Each cell shows the active plan number and{' '}
-          {measurement.label.toLowerCase()} (in seconds). Shading is a
-          heatmap of that value across the whole corridor and day — darker
-          means higher, per the scale above. Click a time (column header or
-          cell) to select it — the same selection used by the Map view's
-          Time-Space Data overlay. Prefer a side-by-side view? See the
-          Compare tab.
-        </p>
+        {!grid?.unavailable && (
+          <p className="timespace-page__hint">
+            Each cell shows the active plan number and{' '}
+            {measurement.label.toLowerCase()} (in seconds). Shading is a
+            heatmap of that value across the whole corridor and day — darker
+            means higher, per the scale above. Click a time (column header or
+            cell) to select it — the same selection used by the Map view's
+            Time-Space Data overlay. Prefer a side-by-side view? See the
+            Compare tab.
+          </p>
+        )}
       </div>
 
       {gridStatus === 'loading' && !grid && (

@@ -136,9 +136,8 @@ export default function TimespaceComparisonView({
 
         <p className="timespace-page__hint">
           Existing and Proposed, same rows and columns, scrolled and
-          selected together. Dashed cells on the Proposed side are real
-          data that hasn't been retimed yet; solid amber <strong>IP</strong>{' '}
-          cells mean nothing has been imported for that intersection yet.
+          selected together. Dashed cells on either side are real data that
+          matches the other scenario exactly — it hasn't been retimed yet.
         </p>
       </div>
 
@@ -172,24 +171,30 @@ export default function TimespaceComparisonView({
           <div className="timespace-compare__panel">
             <div
               className={`timespace-compare__panel-header ${
-                proposedGrid.placeholder ? 'is-placeholder' : ''
+                proposedGrid.unavailable ? 'is-unavailable' : ''
               }`}
             >
               <span className="timespace-compare__panel-label">Proposed — Retiming</span>
-              {proposedGrid.placeholder && (
-                <span className="timespace-compare__panel-badge">no data imported</span>
+              {proposedGrid.unavailable && (
+                <span className="timespace-compare__panel-badge">not available</span>
               )}
             </div>
-            <TimespaceGridTable
-              ref={proposedScrollRef}
-              grid={proposedGrid}
-              measurement={measurement}
-              valueRange={valueRange}
-              slotIndex={slotIndex}
-              timespaceOn={timespaceOn}
-              onSelectSlot={selectSlot}
-              onScroll={handleProposedScroll}
-            />
+            {proposedGrid.unavailable ? (
+              <div className="timespace-compare__panel-status">
+                Proposed time-space data isn't available for this corridor.
+              </div>
+            ) : (
+              <TimespaceGridTable
+                ref={proposedScrollRef}
+                grid={proposedGrid}
+                measurement={measurement}
+                valueRange={valueRange}
+                slotIndex={slotIndex}
+                timespaceOn={timespaceOn}
+                onSelectSlot={selectSlot}
+                onScroll={handleProposedScroll}
+              />
+            )}
           </div>
         </div>
       )}

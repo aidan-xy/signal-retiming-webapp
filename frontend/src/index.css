@@ -60,27 +60,6 @@
 .heat-6 { background: var(--heat-6); color: var(--paper); }
 .heat-7 { background: var(--heat-7); color: var(--paper); }
 
-/* Proposed timing that hasn't been decided yet (see schema.sql /
-   extract.py) -- a neutral, dashed treatment distinct from the heat scale,
-   so "IP" (in progress / not yet entered) never reads as a real, colored
-   measurement value. Uses outline, not border: table cells here only set
-   border-bottom/border-left (top/right are zero-width `none`), so a
-   `border` shorthand would flip top/right on to the browser's default
-   ~3px width and inflate that row's height, desyncing the Compare page's
-   two tables. Outline never affects box sizing or table layout. */
-.heat-ip {
-  background: repeating-linear-gradient(
-    135deg,
-    var(--paper),
-    var(--paper) 4px,
-    var(--line) 4px,
-    var(--line) 8px
-  );
-  color: var(--steel-soft);
-  outline: 1px dashed var(--line-strong);
-  outline-offset: -1px;
-}
-
 * {
   box-sizing: border-box;
 }

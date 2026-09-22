@@ -102,10 +102,11 @@ const SPECS = [
       { cycle: 90, offset: 30, tod: 'MON-FRI 06:00-09:00' },
       { cycle: 94, offset: 34, tod: 'MON-FRI 09:00-16:00' },
     ],
-    // Nothing has been imported for Proposed at this intersection at all --
-    // exercises the "IP" placeholder state in the drawer (Timing Plans /
-    // Phasing & Timing tabs).
-    proposedMissing: true,
+    // Proposed timing couldn't be read for this intersection at all (e.g. a
+    // layout gap in the workbook's final-proposed block, same as Kings_Hwy
+    // in the real corridor -- see extract.py) -- exercises the "unavailable"
+    // state in the drawer (Timing Plans / Phasing & Timing tabs).
+    proposedUnavailable: true,
   },
   {
     tab_name: 'New_York_Ave',
@@ -249,12 +250,12 @@ function buildIntersection(spec, id) {
     durations: planDurations[i],
   }))
 
-  // null (not an empty array) signals "nothing imported for Proposed at
-  // this intersection at all" -- matches the real API's per-intersection
-  // 404 case (see client.js's getIntersectionDetail), as distinct from
+  // null (not an empty array) signals "proposed timing couldn't be read for
+  // this intersection at all" -- matches client.js's getIntersectionDetail
+  // when the real API returns zero proposed rows, as distinct from
   // "imported but identical to Existing" (matchesExisting, computed later
   // by comparing plans/plansProposed).
-  const plansProposed = spec.proposedMissing
+  const plansProposed = spec.proposedUnavailable
     ? null
     : spec.plans.map((p, i) => ({
         plan_number: i + 1,
@@ -348,12 +349,11 @@ function deriveSampleMovements(splits, channels, plan) {
   ]
 }
 
-// Mirrors client.js's matchesExistingPlan/matchesExistingSlot: a proposed
-// plan or slot only counts as "matches existing" when every field that
-// matters is byte-identical, not just close. Duplicated here (rather than
-// imported) because client.js's version is specific to comparing two real
-// API responses -- this operates on the sample data's own already-built
-// objects instead.
+// Mirrors client.js's matchesExistingPlan: a proposed plan only counts as
+// "matches existing" when every field that matters is byte-identical, not
+// just close. Duplicated here (rather than imported) because client.js's
+// version is specific to comparing two real API responses -- this operates
+// on the sample data's own already-built objects instead.
 function plansEqual(a, b) {
   if (!a || !b) return false
   if (a.cycle_length_s !== b.cycle_length_s) return false
@@ -361,29 +361,6 @@ function plansEqual(a, b) {
   const keys = new Set([...Object.keys(a.durations), ...Object.keys(b.durations)])
   for (const k of keys) {
     if ((a.durations[k] ?? null) !== (b.durations[k] ?? null)) return false
-  }
-  return true
-}
-
-function slotsEqual(a, b) {
-  if (a.plan_number !== b.plan_number) return false
-  if (a.cycle_length_s !== b.cycle_length_s) return false
-  if (a.offset_s !== b.offset_s) return false
-  const am = new Map(a.movements.map((m) => [m.movement_class, m]))
-  const bm = new Map(b.movements.map((m) => [m.movement_class, m]))
-  const classes = new Set([...am.keys(), ...bm.keys()])
-  for (const cls of classes) {
-    const x = am.get(cls)
-    const y = bm.get(cls)
-    if (!x || !y) return false
-    if (
-      x.split_s !== y.split_s ||
-      x.wk_s !== y.wk_s ||
-      x.fldw_s !== y.fldw_s ||
-      x.yellow_allred_s !== y.yellow_allred_s
-    ) {
-      return false
-    }
   }
   return true
 }
@@ -412,15 +389,10 @@ export const mockDataSource = {
     if (scenario === 'existing') return { ...detail, scenario }
 
     if (!detail.plansProposed) {
-      // Nothing imported for Proposed at this intersection at all (see
-      // buildIntersection) -- same fallback shape as client.js's
-      // getIntersectionDetail when the real API returns zero proposed rows.
-      return {
-        ...detail,
-        scenario,
-        placeholder: true,
-        plans: detail.plans.map((p) => ({ ...p, placeholder: true })),
-      }
+      // Proposed timing couldn't be read at this intersection at all (see
+      // buildIntersection) -- same shape as client.js's getIntersectionDetail
+      // when the real API returns zero proposed rows.
+      return { ...detail, scenario, plans: [], unavailable: true }
     }
 
     const existingByNumber = new Map(detail.plans.map((p) => [p.plan_number, p]))
@@ -457,42 +429,10 @@ export const mockDataSource = {
     const existingGrid = { corridor: CORRIDOR.name, scenario: 'existing', day_type: dayType, intersections }
     if (scenario === 'existing') return existingGrid
 
-    // Simulate a corridor where the proposed retiming has only been
-    // entered for weekday plans so far -- picking weekend here exercises
-    // the "nothing resolvable at all" placeholder state (real amber "IP"
-    // cells, not just a same-as-existing ring), the same fallback the real
-    // API hits when a scenario has no tod_slots/plan_movements whatsoever
-    // (see client.js).
-    if (dayType === 'weekend') {
-      return { ...existingGrid, scenario, placeholder: true }
-    }
-
-    const proposedIntersections = SPECS.map((spec, i) => {
-      const detail = DETAILS.get(i + 1)
-      const existingInter = existingGrid.intersections[i]
-      // No proposed plans imported for this intersection at all (see
-      // buildIntersection) -- fall back to resolving from Existing's own
-      // plans, which naturally comes out byte-identical to the existing
-      // slot below and so reads as "matches existing", not as missing --
-      // the grid has no per-intersection placeholder concept the way the
-      // drawer does (see the module docstring in timespace.py).
-      const sourcePlans = detail.plansProposed || detail.plans
-      const slots = existingInter.slots.map((existingSlot, slotIndex) => {
-        const plan = resolveSamplePlan(sourcePlans, dayType, slotIndex)
-        const slot = {
-          slot_index: slotIndex,
-          slot_time: existingSlot.slot_time,
-          plan_number: plan.plan_number,
-          cycle_length_s: plan.cycle_length_s,
-          offset_s: plan.offset_s,
-          movements: deriveSampleMovements(detail.splits, detail.channels, plan),
-        }
-        slot.matchesExisting = slotsEqual(slot, existingSlot)
-        return slot
-      })
-      return { ...existingInter, slots }
-    })
-
-    return { ...existingGrid, scenario, intersections: proposedIntersections }
+    // Mirrors the real API exactly (see client.js / timespace.py): the
+    // workbook has no numerically-resolvable Proposed TOD/movement data at
+    // all, for any day type, so this scenario has nothing to show -- report
+    // that plainly rather than synthesizing a grid out of Existing's data.
+    return { corridor: CORRIDOR.name, scenario, day_type: dayType, intersections: [], unavailable: true }
   },
 }

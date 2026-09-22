@@ -6,8 +6,11 @@ import './TimespaceGridTable.css'
  * Renders one scenario's timespace grid as a scrollable table: intersection
  * rows x 15-minute-slot columns. Pulled out of TimespaceMapView so the
  * Comparison view (two grids side by side) can render the exact same table
- * -- same cell logic, same "IP"/"same as existing" treatment -- without the
- * two views drifting apart.
+ * -- same cell logic, same "same as existing" treatment -- without the two
+ * views drifting apart.
+ *
+ * Renders nothing when the grid is unavailable (see client.js's
+ * getTimespace) -- callers show a "not available" message instead.
  *
  * The scroll container ref is forwarded so callers can drive scroll-into-
  * view (single view) or synchronized scrolling (comparison view).
@@ -30,7 +33,7 @@ const TimespaceGridTable = forwardRef(function TimespaceGridTable(
     }
   }
 
-  if (!grid) return null
+  if (!grid || grid.unavailable) return null
 
   return (
     <div
@@ -71,9 +74,8 @@ const TimespaceGridTable = forwardRef(function TimespaceGridTable(
               </th>
               {inter.slots.map((slot) => {
                 const value = measurement.getValue(slot)
-                const isPlaceholder = Boolean(grid.placeholder)
-                const isSameAsExisting = !isPlaceholder && Boolean(slot.matchesExisting)
-                const heatBucket = isPlaceholder ? 'ip' : valueToHeatBucket(value, valueRange)
+                const isSameAsExisting = Boolean(slot.matchesExisting)
+                const heatBucket = valueToHeatBucket(value, valueRange)
                 return (
                   <td
                     key={slot.slot_index}
@@ -89,17 +91,13 @@ const TimespaceGridTable = forwardRef(function TimespaceGridTable(
                       isSameAsExisting ? 'is-same-as-existing' : ''
                     }`}
                     title={
-                      isPlaceholder
-                        ? `Plan ${slot.plan_number} · ${slot.slot_time} · no proposed data imported (IP) · click to select`
-                        : isSameAsExisting
+                      isSameAsExisting
                         ? `Plan ${slot.plan_number} · ${slot.slot_time} · matches existing, not yet retimed · click to select`
                         : `Plan ${slot.plan_number} · ${slot.slot_time} · click to select`
                     }
                   >
                     <span className="timespace-grid__cell-plan">P{slot.plan_number}</span>
-                    <span className="timespace-grid__cell-value">
-                      {isPlaceholder ? 'IP' : value ?? '—'}
-                    </span>
+                    <span className="timespace-grid__cell-value">{value ?? '—'}</span>
                   </td>
                 )
               })}

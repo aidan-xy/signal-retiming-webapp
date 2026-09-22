@@ -258,13 +258,13 @@
   color: var(--signal-red);
 }
 
-.map-view__timespace-status--placeholder {
+.map-view__timespace-status--unavailable {
   margin: 0;
   padding: 8px 10px;
-  background: rgba(168, 113, 15, 0.1);
-  border: 1px dashed var(--amber);
+  background: var(--paper);
+  border: 1px dashed var(--line-strong);
   border-radius: var(--radius);
-  color: var(--amber);
+  color: var(--steel-soft);
   line-height: 1.4;
 }
 
@@ -345,9 +345,9 @@
   display: none;
 }
 
-/* Proposed value that's real but hasn't diverged from Existing yet -- a
-   dashed ring instead of the placeholder's neutral fill, so it keeps its
-   real heat color and only the border communicates "not retimed yet". */
+/* A value that's real but hasn't diverged from the other scenario -- a
+   dashed ring keeps its real heat color, with only the border communicating
+   "not retimed yet". */
 .leaflet-tooltip.timespace-marker-tooltip.is-same-as-existing {
   border: 1.5px dashed var(--steel-soft);
 }

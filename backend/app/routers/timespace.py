@@ -21,11 +21,10 @@ plus, per Major/Minor movement, how much of that cycle is vehicle green
 clearance -- everything the map needs to draw progression bands, not just
 mark which plan is active.
 
-`scenario` defaults to 'existing'. 'proposed' is accepted too, for when a
-retiming is decided and re-imported, but currently 404s everywhere: the
-workbook has no numerically-resolvable Proposed TOD/movement data yet (see
-extract.py's module docstring), so tod_slots/plan_movements are only ever
-populated for scenario='existing' as of this import.
+`scenario` defaults to 'existing'. 'proposed' is accepted too, but 404s
+everywhere: the workbook has no numerically-resolvable Proposed TOD/movement
+data at all (see extract.py's module docstring), so tod_slots/plan_movements
+are only ever populated for scenario='existing'.
 """
 
 from __future__ import annotations
