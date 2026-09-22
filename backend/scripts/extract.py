@@ -430,10 +430,12 @@ def _read_plans(ws, block_col: int, off_label_row: int,
     return plans
 
 
-def _read_new_proposed_plans(ws, block_col: int, splits: list[Split]) -> list[TimingPlan]:
+def _read_new_proposed_plans(
+    ws, block_col: int, splits: list[Split], existing_by_number: dict[int, TimingPlan]
+) -> tuple[list[TimingPlan], list[str]]:
     """
     Read the final-proposed staging block (see module docstring) into
-    TimingPlan objects tagged scenario='proposed'.
+    TimingPlan objects tagged scenario='proposed'. Returns (plans, warnings).
 
     Row math mirrors _read_plans/the Existing block almost exactly (same
     ROW_CYCLE_LENGTH/ROW_FIRST_SPLIT/GROUP_STRIDE), except:
@@ -445,25 +447,25 @@ def _read_new_proposed_plans(ws, block_col: int, splits: list[Split]) -> list[Ti
         block is a fixed-height template (through row 63) regardless of how
         many phase groups a tab actually has, so a tab with more than the
         standard four (only Kings_Hwy, see module docstring) has its OFFSET
-        row pushed past the template's edge -- reusing the Existing block's
-        off_label_row there would silently read the wrong cell, so a missing
-        label here is raised as a LayoutError instead.
+        row pushed past the template's edge, and the label just isn't there.
+
+    A plan whose offset cell can't be read this way (the label is missing
+    entirely, or that one column's cell is blank/#N/A) falls back to the
+    corresponding Existing plan's offset_s rather than failing the whole
+    block -- cycle length and split durations are still this block's own
+    real values regardless, so there's no reason to discard those over one
+    missing cell. Each fallback is recorded as a warning so it stays visible
+    rather than silently reading as a real proposed decision.
     """
     search_limit = ROW_FIRST_SPLIT + GROUP_STRIDE * MAX_PHASE_GROUPS + 2
-    off_label_row = None
+    off_row = None
     for row in range(ROW_FIRST_SPLIT, search_limit):
         if _text(ws, row, block_col) == "OFFSET":
-            off_label_row = row
+            off_row = row + 1
             break
-    if off_label_row is None:
-        raise LayoutError(
-            "no 'OFFSET' label found in the final-proposed block -- it may be "
-            "a fixed-height template that doesn't reach this tab's offset row "
-            "(see Kings_Hwy in the module docstring)"
-        )
-    off_row = off_label_row + 1
 
     plans: list[TimingPlan] = []
+    warnings: list[str] = []
     col = block_col
     expected = 1
     while col < MAX_SCAN_COL:
@@ -473,11 +475,25 @@ def _read_new_proposed_plans(ws, block_col: int, splits: list[Split]) -> list[Ti
         cycle = _int(ws, ROW_CYCLE_LENGTH, col)
         if not cycle:
             break  # unused trailing plan-number slot (e.g. Bedford_Ave cols 5/6)
-        offset = _int(ws, off_row, col)
+        offset = _int(ws, off_row, col) if off_row is not None else None
+        if offset is None:
+            existing = existing_by_number.get(n)
+            if existing is not None:
+                offset = existing.offset_s
+                warnings.append(
+                    f"proposed plan {n}: offset missing from the final-proposed "
+                    f"block, using existing plan {n}'s offset ({offset}s) instead"
+                )
+            else:
+                offset = 0
+                warnings.append(
+                    f"proposed plan {n}: offset missing from the final-proposed "
+                    f"block and no existing plan {n} to fall back to -- using 0s"
+                )
         plan = TimingPlan(
             plan_number=n,
             cycle_length_s=cycle,
-            offset_s=offset or 0,
+            offset_s=offset,
             tod_description=_text(ws, ROW_TOD, col),
             scenario="proposed",
         )
@@ -491,7 +507,7 @@ def _read_new_proposed_plans(ws, block_col: int, splits: list[Split]) -> list[Ti
         expected += 1
     if not plans:
         raise LayoutError("no proposed timing plans found in the final-proposed block")
-    return plans
+    return plans, warnings
 
 
 def _find_tod_slot_column(ws, header_text: str) -> int:
@@ -642,16 +658,22 @@ def extract_intersection(ws, tab_name: str, display_name: str,
     # plan/cycle/offset/duration cells, read as real decided values rather
     # than a comparison-block placeholder. No movement-summary block or
     # resolvable TOD table exists for it, so plan_movements/tod_slots are
-    # left empty for these plans. Read as a soft-fail: a tab whose staging
-    # block can't be located or is missing its OFFSET row (see Kings_Hwy in
-    # the module docstring) is a layout surprise worth surfacing as a
-    # warning rather than aborting the whole (otherwise-good) Existing
-    # import for that tab.
+    # left empty for these plans. A missing OFFSET row (see Kings_Hwy in the
+    # module docstring) falls back to Existing's offset per plan rather than
+    # discarding the block's real cycle/split data -- see
+    # _read_new_proposed_plans. Read as a soft-fail otherwise: a tab whose
+    # staging block can't be located at all is a layout surprise worth
+    # surfacing as a warning rather than aborting the whole (otherwise-good)
+    # Existing import for that tab.
     warnings: list[str] = []
+    existing_by_number = {p.plan_number: p for p in plans}
     try:
         new_plan_col = _find_new_plan_block(ws)
-        proposed_plans = _read_new_proposed_plans(ws, new_plan_col, splits)
+        proposed_plans, proposed_warnings = _read_new_proposed_plans(
+            ws, new_plan_col, splits, existing_by_number
+        )
         plans.extend(proposed_plans)
+        warnings.extend(proposed_warnings)
     except LayoutError as exc:
         warnings.append(f"proposed timing block not read: {exc}")
 
