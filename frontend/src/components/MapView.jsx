@@ -135,7 +135,7 @@ export default function MapView({
         zoom={13}
         maxZoom={MAX_ZOOM}
         scrollWheelZoom
-        zoomControl={true}
+        zoomControl={false}
         className="map-view__container"
       >
         <TileLayer
