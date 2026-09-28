@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { MapContainer, TileLayer, Marker, Polyline, Tooltip, useMap } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Polyline, Tooltip, ZoomControl, useMap } from 'react-leaflet'
 import { Clock3, ChevronLeft, ChevronRight } from 'lucide-react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -135,7 +135,7 @@ export default function MapView({
         zoom={13}
         maxZoom={MAX_ZOOM}
         scrollWheelZoom
-        zoomControl={false}
+        zoomControl={true}
         className="map-view__container"
       >
         <TileLayer
@@ -189,6 +189,8 @@ export default function MapView({
             </Marker>
           )
         })}
+
+        <ZoomControl position="bottomright" />
       </MapContainer>
 
       <div className="map-view__layer-toggle" role="group" aria-label="Base map layer">
