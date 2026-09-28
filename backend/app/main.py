@@ -2,10 +2,10 @@
 Thin read API over the signal-timing database.
 
 Scope matches the database: existing ("as-built") and proposed timings, for
-whatever corridors have been imported. Proposed data is currently a
-placeholder (see extract.py) until a retiming is decided and re-imported.
-No write endpoints -- loading data is import_workbook.py's job, not this
-API's.
+whatever corridors have been imported. Proposed data reflects the workbook's
+own final-proposed staging block (see extract.py), so it's real regardless
+of whether a given plan happens to match Existing. No write endpoints --
+loading data is import_workbook.py's job, not this API's.
 
 Run:
     export SIGNALS_DSN="postgresql://username:password@localhost/signals"

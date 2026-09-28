@@ -81,13 +81,13 @@
   color: var(--steel-soft);
 }
 
-.timespace-page__hint--placeholder {
+.timespace-page__hint--unavailable {
   flex-basis: 100%;
   padding: 8px 10px;
-  background: rgba(168, 113, 15, 0.1);
-  border: 1px dashed var(--amber);
+  background: var(--paper);
+  border: 1px dashed var(--line-strong);
   border-radius: var(--radius);
-  color: var(--amber);
+  color: var(--steel-soft);
 }
 
 .timespace-page__hint--same {

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { MapContainer, TileLayer, Marker, Polyline, Tooltip, useMap } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Polyline, Tooltip, ZoomControl, useMap } from 'react-leaflet'
 import { Clock3, ChevronLeft, ChevronRight } from 'lucide-react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -101,7 +101,7 @@ export default function MapView({
     () =>
       Boolean(
         grid &&
-          !grid.placeholder &&
+          !grid.unavailable &&
           grid.intersections.some((inter) => inter.slots[slotIndex]?.matchesExisting)
       ),
     [grid, slotIndex]
@@ -135,7 +135,7 @@ export default function MapView({
         zoom={13}
         maxZoom={MAX_ZOOM}
         scrollWheelZoom
-        zoomControl={false}
+        zoomControl={true}
         className="map-view__container"
       >
         <TileLayer
@@ -156,9 +156,8 @@ export default function MapView({
         {intersections.map((item) => {
           const slot = slotsByIntersectionId.get(item.id)?.slots[slotIndex]
           const value = slot ? measurement.getValue(slot) : null
-          const isPlaceholder = Boolean(grid?.placeholder)
-          const isSameAsExisting = !isPlaceholder && Boolean(slot?.matchesExisting)
-          const heatBucket = isPlaceholder ? 'ip' : valueToHeatBucket(value, valueRange)
+          const isSameAsExisting = Boolean(slot?.matchesExisting)
+          const heatBucket = valueToHeatBucket(value, valueRange)
           return (
             <Marker
               key={item.id}
@@ -181,17 +180,17 @@ export default function MapView({
                   className={`timespace-marker-tooltip heat-${heatBucket} ${
                     isSameAsExisting ? 'is-same-as-existing' : ''
                   }`}
-                  title={isSameAsExisting ? 'Matches existing — not yet retimed' : undefined}
+                  title={isSameAsExisting ? 'Matches existing' : undefined}
                 >
                   <span className="timespace-marker-tooltip__plan">P{slot.plan_number}</span>
-                  <span className="timespace-marker-tooltip__value">
-                    {isPlaceholder ? 'IP' : value ?? '—'}
-                  </span>
+                  <span className="timespace-marker-tooltip__value">{value ?? '—'}</span>
                 </Tooltip>
               )}
             </Marker>
           )
         })}
+
+        <ZoomControl position="bottomright" />
       </MapContainer>
 
       <div className="map-view__layer-toggle" role="group" aria-label="Base map layer">
@@ -251,19 +250,18 @@ export default function MapView({
               </select>
             </label>
 
-            {grid && <HeatLegend range={valueRange} />}
+            {grid && !grid.unavailable && <HeatLegend range={valueRange} />}
 
-            {grid?.placeholder && (
-              <p className="map-view__timespace-status map-view__timespace-status--placeholder">
-                No proposed data has been imported yet — showing{' '}
-                <strong>IP</strong> (in progress) in place of a value.
+            {grid?.unavailable && (
+              <p className="map-view__timespace-status map-view__timespace-status--unavailable">
+                Proposed time-space data isn't available for this corridor.
               </p>
             )}
 
-            {!grid?.placeholder && currentSlotAnyMatchesExisting && (
+            {!grid?.unavailable && currentSlotAnyMatchesExisting && (
               <p className="map-view__timespace-status map-view__timespace-status--same">
-                Markers with a dashed ring haven't been retimed yet — the
-                value shown still matches Existing exactly.
+                Markers with a dashed ring show proposed data that matches
+                Existing exactly.
               </p>
             )}
 

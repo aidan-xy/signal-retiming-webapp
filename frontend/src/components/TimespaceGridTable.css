@@ -127,9 +127,9 @@
   border-left: 1px solid var(--line-strong);
 }
 
-/* Proposed value that's real but hasn't diverged from Existing yet -- keeps
-   its real heat color; only a ring communicates "not retimed yet", same
-   visual language as the map overlay's marker ring. Uses outline, not
+/* A value that's real but matches the other scenario exactly -- keeps its
+   real heat color; only a ring communicates the match, same visual
+   language as the map overlay's marker ring. Uses outline, not
    border: `.timespace-grid__cell` only sets border-bottom/border-left
    (top/right are `none`, i.e. zero width), so adding `border-style: dashed`
    here would flip top/right to the browser's default ~3px "medium" width --

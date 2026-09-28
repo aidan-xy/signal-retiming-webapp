@@ -3,12 +3,11 @@
 Import existing ("as-built") and proposed signal timings from a NYCDOT
 corridor comparison workbook into PostgreSQL.
 
-Proposed timing plans are imported as-is even though the workbook currently
-leaves them as a placeholder (formula copies of Existing, only 2 of the
-block's plan-number slots filled in, no retiming decided) -- see
-extract.py's module docstring. This gets the schema/API ready for the
-moment real proposed numbers replace those formulas, without a second
-migration.
+Proposed timing plans are read from the workbook's own final-proposed
+staging block (the "Copy and paste into the new signal timing sheet" note),
+not the in-place Existing/Proposed comparison block -- see extract.py's
+module docstring. Its numbers are real retiming decisions, including where
+a plan's proposed value happens to equal Existing's unchanged.
 
     # inspect what would be loaded, no database needed
     python import_workbook.py corridor.xlsm --corridor "Linden Blvd" --dry-run

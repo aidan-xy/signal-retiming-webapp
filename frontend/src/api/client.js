@@ -36,16 +36,15 @@ function pivotPlans(rows) {
   return [...byPlan.values()].sort((a, b) => a.plan_number - b.plan_number)
 }
 
-// A proposed plan "matches existing" -- real data was imported, it just
-// hasn't been retimed yet -- when its cycle length, offset, and every split
-// duration are byte-identical to the existing plan sharing its plan_number.
-// Compared client-side rather than trusting a flag from the API, since the
-// backend deliberately doesn't judge this -- it imports the workbook's
-// Proposed block as-is and leaves "has this actually changed" to the caller.
-// This is distinct from a plan having no proposed data at all (see
-// `placeholder` below): plenty of intersections simply haven't been
-// retimed yet, and that's a normal, expected state worth showing plainly
-// -- not something to hide behind a missing-data marker.
+// A proposed plan "matches existing" -- a real, deliberate "no change here"
+// decision -- when its cycle length, offset, and every split duration are
+// byte-identical to the existing plan sharing its plan_number. Compared
+// client-side rather than trusting a flag from the API, since the backend
+// deliberately doesn't judge this -- it imports the workbook's final-
+// proposed values as-is and leaves "has this actually changed" to the
+// caller. Plenty of intersections simply weren't retimed, and that's a
+// normal, expected state worth showing plainly, not hiding behind a
+// missing-data marker.
 function matchesExistingPlan(proposedPlan, existingPlan) {
   if (!existingPlan) return false
   if (proposedPlan.cycle_length_s !== existingPlan.cycle_length_s) return false
@@ -62,24 +61,23 @@ function matchesExistingPlan(proposedPlan, existingPlan) {
   return true
 }
 
-// A proposed slot "matches existing" -- real data was imported, it just
-// hasn't been retimed yet -- when its plan number, cycle length, offset,
-// and every Major/Minor movement value are identical to the corresponding
-// existing slot (same intersection, same slot_index). Same reasoning as
-// matchesExistingPlan above: some intersections just haven't been retimed
-// yet, and that's a normal state worth showing plainly rather than masking
-// behind "IP".
-function matchesExistingSlot(proposedSlot, existingSlot) {
-  if (!existingSlot) return false
-  if (proposedSlot.plan_number !== existingSlot.plan_number) return false
-  if (proposedSlot.cycle_length_s !== existingSlot.cycle_length_s) return false
-  if (proposedSlot.offset_s !== existingSlot.offset_s) return false
-  const proposedByClass = new Map(proposedSlot.movements.map((m) => [m.movement_class, m]))
-  const existingByClass = new Map(existingSlot.movements.map((m) => [m.movement_class, m]))
-  const classes = new Set([...proposedByClass.keys(), ...existingByClass.keys()])
+// A proposed slot "matches existing" -- a real, deliberate "no change here"
+// decision -- when its plan number, cycle length, offset, and every
+// Major/Minor movement value are identical to the corresponding existing
+// slot (same intersection, same slot_index). The comparison is symmetric --
+// pass either slot first -- so the same function annotates both sides of a
+// side-by-side comparison (see withMatchesExisting below).
+function matchesExistingSlot(slotA, slotB) {
+  if (!slotA || !slotB) return false
+  if (slotA.plan_number !== slotB.plan_number) return false
+  if (slotA.cycle_length_s !== slotB.cycle_length_s) return false
+  if (slotA.offset_s !== slotB.offset_s) return false
+  const aByClass = new Map(slotA.movements.map((m) => [m.movement_class, m]))
+  const bByClass = new Map(slotB.movements.map((m) => [m.movement_class, m]))
+  const classes = new Set([...aByClass.keys(), ...bByClass.keys()])
   for (const cls of classes) {
-    const a = proposedByClass.get(cls)
-    const b = existingByClass.get(cls)
+    const a = aByClass.get(cls)
+    const b = bByClass.get(cls)
     if (!a || !b) return false
     if (
       a.split_s !== b.split_s ||
@@ -93,27 +91,27 @@ function matchesExistingSlot(proposedSlot, existingSlot) {
   return true
 }
 
-// Tags each slot of a successfully-fetched proposed grid with
-// `matchesExisting`, by pairing it against the same intersection/slot_index
-// in the existing grid.
-function annotateGridMatches(proposedGrid, existingGrid) {
-  const existingByIntersection = new Map(
-    existingGrid.intersections.map((inter) => [inter.intersection_id, inter])
+// Tags each slot of `grid` with `matchesExisting`, by pairing it against the
+// same intersection/slot_index in `otherGrid`. Used on BOTH sides of a
+// comparison (existing tagged against proposed, and proposed against
+// existing) so a matching cell gets the same dashed "not retimed" ring on
+// whichever scenario is showing, not just the proposed one.
+function withMatchesExisting(grid, otherGrid) {
+  const otherByIntersection = new Map(
+    otherGrid.intersections.map((inter) => [inter.intersection_id, inter])
   )
-  const intersections = proposedGrid.intersections.map((inter) => {
-    const existingInter = existingByIntersection.get(inter.intersection_id)
-    const existingSlotsByIndex = new Map(
-      (existingInter?.slots ?? []).map((s) => [s.slot_index, s])
-    )
+  const intersections = grid.intersections.map((inter) => {
+    const otherInter = otherByIntersection.get(inter.intersection_id)
+    const otherSlotsByIndex = new Map((otherInter?.slots ?? []).map((s) => [s.slot_index, s]))
     return {
       ...inter,
       slots: inter.slots.map((slot) => ({
         ...slot,
-        matchesExisting: matchesExistingSlot(slot, existingSlotsByIndex.get(slot.slot_index)),
+        matchesExisting: matchesExistingSlot(slot, otherSlotsByIndex.get(slot.slot_index)),
       })),
     }
   })
-  return { ...proposedGrid, intersections }
+  return { ...grid, intersections }
 }
 
 export function createApiDataSource(corridorName) {
@@ -157,14 +155,13 @@ export function createApiDataSource(corridorName) {
         return { intersection, channels, splits, plans: pivotPlans(rows), scenario }
       }
 
-      // Proposed: fetch both scenarios so each proposed plan can be
-      // compared against its existing counterpart. Two different states
-      // fall out of that comparison, and they're shown differently:
-      //   - no proposed plan data at all for this intersection -> genuinely
-      //     missing (nothing was importable), shown as "IP".
-      //   - a proposed plan exists but is identical to existing -> real
-      //     data, simply not retimed yet -- shown as the real value, with
-      //     a "same as existing" marker rather than hidden behind "IP".
+      // Proposed: fetch both scenarios so each proposed plan can be compared
+      // against its existing counterpart -- a proposed plan identical to
+      // existing is a real, deliberate "no change here" decision, shown as
+      // the real value with a "same as existing" marker. A tab whose
+      // final-proposed block genuinely couldn't be read (see extract.py --
+      // e.g. Kings_Hwy) has nothing to show for this scenario at all; that's
+      // surfaced plainly via `unavailable`, not synthesized from Existing.
       const [proposedRows, existingRows] = await Promise.all([
         getJSON(timingURL('proposed')),
         getJSON(timingURL('existing')),
@@ -173,17 +170,7 @@ export function createApiDataSource(corridorName) {
       const proposedPlans = pivotPlans(proposedRows)
 
       if (proposedPlans.length === 0) {
-        // Nothing importable for this scenario at all yet -- show the
-        // existing plan set as a full placeholder shell, same fallback used
-        // for the timespace grid.
-        return {
-          intersection,
-          channels,
-          splits,
-          plans: existingPlans.map((p) => ({ ...p, placeholder: true })),
-          scenario,
-          placeholder: true,
-        }
+        return { intersection, channels, splits, plans: [], scenario, unavailable: true }
       }
 
       const existingByNumber = new Map(existingPlans.map((p) => [p.plan_number, p]))
@@ -204,14 +191,14 @@ export function createApiDataSource(corridorName) {
     // interaction.
     //
     // scenario='proposed' currently has nothing to resolve on the backend
-    // for any intersection (see schema.sql / extract.py: the workbook's
-    // Proposed block has no populated TOD/movement data yet, only Existing
-    // does), so the API 404s for it -- caught below and shown as a full
-    // `placeholder: true` grid (real "IP" everywhere) rather than a hard
-    // error. Once that data exists, per-slot comparison against Existing
-    // (mirroring getIntersectionDetail's per-plan comparison) will show
-    // real values with `matchesExisting: true` for slots that haven't
-    // diverged yet, rather than treating the whole grid as missing.
+    // for any intersection (see schema.sql / extract.py: the workbook has no
+    // numerically-resolvable Proposed TOD/movement data at all, only
+    // Existing does), so the API 404s for it -- caught below and reported
+    // plainly via `unavailable: true` rather than synthesizing a grid out of
+    // Existing's data. Should that data ever exist, per-slot comparison
+    // against Existing (mirroring getIntersectionDetail's per-plan
+    // comparison) will show real values with `matchesExisting: true` for
+    // slots that haven't diverged, same as the plan-level comparison above.
     async getTimespace(dayType, scenario = 'existing') {
       const corridor = await this.getCorridor()
       const url = (s) =>
@@ -220,19 +207,27 @@ export function createApiDataSource(corridorName) {
         )}&scenario=${encodeURIComponent(s)}`
 
       if (scenario === 'existing') {
-        return getJSON(url('existing'))
+        const existingGrid = await getJSON(url('existing'))
+        // Best-effort: annotate Existing's own cells with `matchesExisting`
+        // too, so a side-by-side comparison rings both sides of a matching
+        // cell, not just the Proposed one. Existing still renders fine
+        // un-annotated if Proposed genuinely has nothing to compare against.
+        try {
+          const proposedGrid = await getJSON(url('proposed'))
+          return withMatchesExisting(existingGrid, proposedGrid)
+        } catch {
+          return existingGrid
+        }
       }
 
-      const existingPromise = getJSON(url('existing'))
       let proposedGrid
       try {
         proposedGrid = await getJSON(url(scenario))
       } catch {
-        const existing = await existingPromise
-        return { ...existing, scenario, placeholder: true }
+        return { corridor: corridor.name, scenario, day_type: dayType, intersections: [], unavailable: true }
       }
-      const existingGrid = await existingPromise
-      return annotateGridMatches({ ...proposedGrid, scenario }, existingGrid)
+      const existingGrid = await getJSON(url('existing'))
+      return withMatchesExisting({ ...proposedGrid, scenario }, existingGrid)
     },
   }
 }

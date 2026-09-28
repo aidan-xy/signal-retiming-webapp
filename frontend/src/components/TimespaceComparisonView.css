@@ -45,8 +45,8 @@
   white-space: nowrap;
 }
 
-.timespace-compare__panel-header.is-placeholder .timespace-compare__panel-label {
-  color: var(--amber);
+.timespace-compare__panel-header.is-unavailable .timespace-compare__panel-label {
+  color: var(--steel-soft);
 }
 
 .timespace-compare__panel-badge {
@@ -57,12 +57,24 @@
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--amber);
-  background: rgba(168, 113, 15, 0.14);
-  border: 1px solid var(--amber);
+  color: var(--steel-soft);
+  background: var(--paper);
+  border: 1px solid var(--line-strong);
   border-radius: var(--radius);
   padding: 3px 6px;
   white-space: nowrap;
+}
+
+.timespace-compare__panel-status {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--steel-soft);
+  text-align: center;
 }
 
 @media (max-width: 900px) {

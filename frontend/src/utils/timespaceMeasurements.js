@@ -11,10 +11,10 @@ export function movementValue(slot, movementClass, field) {
 // surface per slot: the plan's own cycle length/offset, plus its Major and
 // Minor approach breakdown (vehicle green "Split", pedestrian WALK, flashing
 // DON'T WALK, and combined yellow+all-red clearance). Mirrors the workbook
-// Time_SpaceMap tab's own Measurement dropdown. Available for both the
-// 'existing' and 'proposed' scenarios (see schema.sql) -- though 'proposed'
-// currently renders as a placeholder ("IP") everywhere, since the workbook
-// has no retiming decided yet.
+// Time_SpaceMap tab's own Measurement dropdown. Available for the
+// 'existing' scenario; 'proposed' has nothing to show here -- the workbook
+// has no numerically-resolvable per-slot schedule/movement data for it (see
+// schema.sql / extract.py).
 export const MEASUREMENTS = [
   { key: 'cycle_length_s', label: 'Cycle Length', getValue: (slot) => slot.cycle_length_s },
   { key: 'offset_s', label: 'Offset', getValue: (slot) => slot.offset_s },
